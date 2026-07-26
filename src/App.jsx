@@ -303,24 +303,24 @@ function asignarColoresSinRepetir(items) {
 // ================================================================
 // CUADRO DE DIÁLOGO CONTEXTUAL GUIADO
 // ================================================================
-function CuadroGuia({ texto }) {
+function CuadroGuia({ texto, compacto }) {
   return (
     <div
       style={{
-        display: "flex", gap: 10, alignItems: "flex-start",
+        display: "flex", gap: compacto ? 8 : 10, alignItems: "flex-start",
         background: COLORS.paperDim, border: `1px solid ${COLORS.line}`,
-        borderRadius: 14, padding: "10px 12px", marginBottom: 14,
+        borderRadius: compacto ? 12 : 14, padding: compacto ? "7px 10px" : "10px 12px", marginBottom: compacto ? 8 : 14,
       }}
     >
       <div
         style={{
-          width: 26, height: 26, borderRadius: "50%", background: COLORS.pine, color: COLORS.white,
+          width: compacto ? 20 : 26, height: compacto ? 20 : 26, borderRadius: "50%", background: COLORS.pine, color: COLORS.white,
           display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1,
         }}
       >
-        <GraduationCap size={14} strokeWidth={2.2} />
+        <GraduationCap size={compacto ? 11 : 14} strokeWidth={2.2} />
       </div>
-      <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, color: COLORS.inkSoft, lineHeight: 1.45 }}>
+      <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: compacto ? 11.5 : 12.5, color: COLORS.inkSoft, lineHeight: 1.4 }}>
         {texto}
       </div>
     </div>
@@ -425,28 +425,50 @@ function TourGuiado({ pasos, onCerrar }) {
   const pad = 6;
   const box = rect ? { top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2 } : null;
   const alturaVentana = typeof window !== "undefined" ? window.innerHeight : 800;
+  const anchoVentana = typeof window !== "undefined" ? window.innerWidth : 400;
   const margen = 16;
+  const anchoCartelMin = 240;
+  const anchoCartelMax = 340;
 
   // El cartel se ubica del lado (arriba o abajo del recuadro resaltado)
   // donde haya más espacio libre en la pantalla, así nunca queda tapando
   // lo que se está señalando. Si el espacio de ese lado es más chico que
   // el contenido, el cartel se vuelve scrolleable en vez de invadir el
-  // recuadro resaltado.
-  const cartelStyle = { left: margen, right: margen };
+  // recuadro resaltado. Además, en vez de ocupar todo el ancho de la
+  // pantalla, el cartel se angosta y se centra horizontalmente sobre el
+  // propio elemento señalado (con una flechita que apunta hacia él), para
+  // que quede claro y visualmente pegado a lo que está explicando.
+  let cartelStyle = {};
+  let flecha = null;
   if (box) {
+    const anchoCartel = Math.min(anchoCartelMax, Math.max(anchoCartelMin, box.width + 48, anchoVentana - margen * 2));
+    const centroBox = box.left + box.width / 2;
+    let left = centroBox - anchoCartel / 2;
+    left = Math.max(margen, Math.min(left, anchoVentana - margen - anchoCartel));
+
     const espacioAbajo = alturaVentana - (box.top + box.height) - 12;
     const espacioArriba = box.top - 12;
-    if (espacioAbajo >= espacioArriba) {
-      cartelStyle.top = box.top + box.height + 12;
-      cartelStyle.maxHeight = Math.max(espacioAbajo - margen, 120);
-    } else {
-      cartelStyle.bottom = alturaVentana - box.top + 12;
-      cartelStyle.maxHeight = Math.max(espacioArriba - margen, 120);
-    }
-    cartelStyle.overflowY = "auto";
+    const vaAbajo = espacioAbajo >= espacioArriba;
+
+    cartelStyle = {
+      left, width: anchoCartel,
+      maxHeight: Math.max((vaAbajo ? espacioAbajo : espacioArriba) - margen, 120),
+      overflowY: "auto",
+    };
+    if (vaAbajo) cartelStyle.top = box.top + box.height + 16;
+    else cartelStyle.bottom = alturaVentana - box.top + 16;
+
+    // Posición horizontal de la flecha: apunta al centro del elemento
+    // señalado, pero se mantiene dentro de los bordes del cartel para
+    // que nunca quede "flotando" afuera de la tarjeta.
+    let puntaFlecha = centroBox - left;
+    puntaFlecha = Math.max(18, Math.min(puntaFlecha, anchoCartel - 18));
+    flecha = { left: puntaFlecha, apuntaArriba: vaAbajo };
   } else {
-    cartelStyle.top = "50%";
-    cartelStyle.transform = "translateY(-50%)";
+    cartelStyle = {
+      left: "50%", top: "50%", width: Math.min(anchoCartelMax, anchoVentana - margen * 2),
+      transform: "translate(-50%, -50%)",
+    };
   }
 
   return (
@@ -469,6 +491,15 @@ function TourGuiado({ pasos, onCerrar }) {
           boxShadow: "0 12px 30px rgba(0,0,0,0.35)", zIndex: 210, ...cartelStyle,
         }}
       >
+        {flecha && (
+          <div
+            style={{
+              position: "absolute", left: flecha.left, [flecha.apuntaArriba ? "top" : "bottom"]: -8,
+              width: 16, height: 16, background: COLORS.white, transform: "translateX(-50%) rotate(45deg)",
+              boxShadow: flecha.apuntaArriba ? "-3px -3px 4px -2px rgba(0,0,0,0.12)" : "3px 3px 4px -2px rgba(0,0,0,0.12)",
+            }}
+          />
+        )}
         <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, fontWeight: 700, color: COLORS.ochre, letterSpacing: 0.4, marginBottom: 4 }}>
           PASO {paso + 1} DE {pasos.length}
         </div>
@@ -501,28 +532,45 @@ function TourGuiado({ pasos, onCerrar }) {
   );
 }
 
-function EncabezadoNav({ eyebrow, titulo, subtitulo, accion, onAyuda }) {
+function EncabezadoNav({ eyebrow, titulo, subtitulo, accion, onAyuda, partes }) {
   return (
-    <div style={{ background: COLORS.pineDark, padding: "12px 18px 14px 18px", color: COLORS.white }}>
+    <div style={{ background: COLORS.pineDark, padding: "10px 18px 10px 18px", color: COLORS.white, position: "relative" }}>
       {onAyuda && (
-        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+        <div style={{ position: "absolute", top: 6, right: 10 }}>
           <BotonMenuAyuda onAyuda={onAyuda} />
         </div>
       )}
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 10 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, color: COLORS.ochreSoft, letterSpacing: 0.4, marginBottom: 4 }}>
-            {eyebrow}
+      {partes ? (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, paddingRight: onAyuda ? 26 : 0 }}>
+          <div style={{ display: "flex", alignItems: "baseline", flexWrap: "wrap", gap: "3px 6px", minWidth: 0 }}>
+            <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: COLORS.ochreSoft }}>{partes.colegio}</span>
+            <span style={{ color: COLORS.ochreSoft, fontSize: 13 }}>·</span>
+            <span style={{ fontFamily: "'Fraunces', serif", fontSize: 17, fontWeight: 700, color: COLORS.white }}>{partes.curso}</span>
+            {partes.materia && (
+              <>
+                <span style={{ color: COLORS.ochreSoft, fontSize: 13 }}>·</span>
+                <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: COLORS.ochreSoft }}>{partes.materia}</span>
+              </>
+            )}
           </div>
-          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 600 }}>{titulo}</div>
-          {subtitulo && (
-            <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: COLORS.ochreSoft, marginTop: 2 }}>
-              {subtitulo}
-            </div>
-          )}
+          {accion && <div style={{ flexShrink: 0 }}>{accion}</div>}
         </div>
-        {accion && <div style={{ flexShrink: 0 }}>{accion}</div>}
-      </div>
+      ) : (
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 10, paddingRight: onAyuda ? 26 : 0 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: COLORS.ochreSoft, letterSpacing: 0.4, marginBottom: 2 }}>
+              {eyebrow}
+            </div>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 600, lineHeight: 1.15 }}>{titulo}</div>
+            {subtitulo && (
+              <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: COLORS.ochreSoft, marginTop: 1 }}>
+                {subtitulo}
+              </div>
+            )}
+          </div>
+          {accion && <div style={{ flexShrink: 0 }}>{accion}</div>}
+        </div>
+      )}
     </div>
   );
 }
@@ -603,10 +651,10 @@ function SelectorPeriodo({ periodo, onChange }) {
         <button
           key={p} onClick={() => onChange(p)}
           style={{
-            padding: "6px 11px", borderRadius: 999, border: "none",
+            padding: "5px 10px", borderRadius: 999, border: "none",
             background: periodo === p ? COLORS.ochre : "transparent",
             color: periodo === p ? COLORS.pineDark : COLORS.inkSoft,
-            fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
+            fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
           }}
         >
           {p}° Cuatrim.
@@ -757,7 +805,7 @@ function FilaEntidad({ Icono, titulo, subtitulo, onAbrir, onRenombrar, onElimina
           <Icono size={16} strokeWidth={2.2} />
         </div>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 15, fontWeight: 500, color: COLORS.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 17, fontWeight: 600, color: COLORS.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {titulo}
           </div>
           <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: COLORS.inkSoft }}>{subtitulo}</div>
@@ -884,7 +932,7 @@ function FilaCurso({ Icono, titulo, materia, subtitulo, onAbrir, onRenombrar, on
           <Icono size={16} strokeWidth={2.2} />
         </div>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 15, fontWeight: 500, color: COLORS.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 17, fontWeight: 600, color: COLORS.ink, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {titulo}
           </div>
           <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: COLORS.inkSoft }}>{subtitulo}</div>
@@ -1623,6 +1671,7 @@ function SeccionCriterios({ curso, criterios, ordenPorCurso, onReordenar, onAgre
 function ListaAlumnosRapida({ alumnos, onAgregar, onBorrar, onEditar, onAbrirFicha }) {
   const [draft, setDraft] = useState("");
   const [generoDraft, setGeneroDraft] = useState("F");
+  const [popupGeneroAbierto, setPopupGeneroAbierto] = useState(false);
   const [menuAbierto, setMenuAbierto] = useState(null);
   // Edición del nombre de un alumno ya cargado, por si se tipeó mal.
   const [editandoId, setEditandoId] = useState(null);
@@ -1638,11 +1687,18 @@ function ListaAlumnosRapida({ alumnos, onAgregar, onBorrar, onEditar, onAbrirFic
   const esPrimerAlumno = alumnos.length === 0;
   const mostrarForm = esPrimerAlumno || formAbierto;
 
-  function confirmar() {
+  function intentarAgregar() {
+    if (!draft.trim()) return;
+    setPopupGeneroAbierto(true);
+  }
+
+  function confirmarConGenero(g) {
     const nombre = draft.trim();
     if (!nombre) return;
-    onAgregar(nombre, generoDraft);
+    onAgregar(nombre, g);
+    setGeneroDraft(g);
     setDraft("");
+    setPopupGeneroAbierto(false);
     if (esPrimerAlumno) {
       requestAnimationFrame(() => inputRef.current && inputRef.current.focus());
     } else {
@@ -1661,6 +1717,7 @@ function ListaAlumnosRapida({ alumnos, onAgregar, onBorrar, onEditar, onAbrirFic
 
   function cerrarForm() {
     setDraft("");
+    setPopupGeneroAbierto(false);
     setFormAbierto(false);
   }
 
@@ -1685,7 +1742,7 @@ function ListaAlumnosRapida({ alumnos, onAgregar, onBorrar, onEditar, onAbrirFic
 
   return (
     <div style={{ position: "relative" }}>
-      <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, overflow: "hidden", background: COLORS.white, boxShadow: "0 1px 3px rgba(21,53,49,0.06)" }}>
+      <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, background: COLORS.white, boxShadow: "0 1px 3px rgba(21,53,49,0.06)" }}>
         {alumnos.map((al, i) => (
           <div
             key={al.id}
@@ -1775,17 +1832,7 @@ function ListaAlumnosRapida({ alumnos, onAgregar, onBorrar, onEditar, onAbrirFic
         ))}
 
         {mostrarForm && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 12px" }}>
-            <div style={{ display: "flex", borderRadius: 999, overflow: "hidden", border: `1px solid ${COLORS.line}`, flexShrink: 0 }}>
-              <span
-                onClick={() => setGeneroDraft("F")}
-                style={{ padding: "4px 8px", fontSize: 11, fontWeight: 700, cursor: "pointer", background: generoDraft === "F" ? COLORS.avatarF : COLORS.white, color: generoDraft === "F" ? COLORS.white : COLORS.inkSoft, fontFamily: "'IBM Plex Sans', sans-serif" }}
-              >F</span>
-              <span
-                onClick={() => setGeneroDraft("M")}
-                style={{ padding: "4px 8px", fontSize: 11, fontWeight: 700, cursor: "pointer", background: generoDraft === "M" ? COLORS.avatarM : COLORS.white, color: generoDraft === "M" ? COLORS.white : COLORS.inkSoft, fontFamily: "'IBM Plex Sans', sans-serif" }}
-              >M</span>
-            </div>
+          <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 8, padding: "10px 12px" }}>
             <span style={{ minWidth: 20, textAlign: "left", flexShrink: 0, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12.5, color: COLORS.ochre }}>
               {alumnos.length + 1}.
             </span>
@@ -1793,13 +1840,13 @@ function ListaAlumnosRapida({ alumnos, onAgregar, onBorrar, onEditar, onAbrirFic
               ref={inputRef}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") confirmar(); }}
+              onKeyDown={(e) => { if (e.key === "Enter") intentarAgregar(); }}
               placeholder="Apellido, Nombre"
               autoFocus
               style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14.5, color: COLORS.ink }}
             />
             <button
-              onClick={confirmar}
+              onClick={intentarAgregar}
               style={{ flexShrink: 0, padding: "6px 12px", borderRadius: 999, border: "none", background: COLORS.pine, color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 600, cursor: "pointer" }}
             >
               Agregar
@@ -1810,6 +1857,36 @@ function ListaAlumnosRapida({ alumnos, onAgregar, onBorrar, onEditar, onAbrirFic
                 style={{ flexShrink: 0, padding: "4px 6px", fontSize: 16, color: COLORS.inkSoft, cursor: "pointer", lineHeight: 1 }}
                 aria-label="Cerrar"
               >×</span>
+            )}
+
+            {popupGeneroAbierto && (
+              <>
+                <div onClick={() => setPopupGeneroAbierto(false)} style={{ position: "fixed", inset: 0, zIndex: 95 }} />
+                <div
+                  style={{
+                    position: "absolute", bottom: "calc(100% + 8px)", left: 12, right: 12, background: COLORS.white,
+                    borderRadius: 14, boxShadow: "0 10px 28px rgba(0,0,0,0.28)", padding: 14, zIndex: 96,
+                  }}
+                >
+                  <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, color: COLORS.inkSoft, marginBottom: 10 }}>
+                    ¿Mujer o varón? Al elegir, se guarda a <strong>{draft.trim()}</strong>.
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <span
+                      onClick={() => confirmarConGenero("F")}
+                      style={{ flex: 1, textAlign: "center", padding: "10px 6px", borderRadius: 10, cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 700, background: COLORS.avatarF, color: COLORS.white }}
+                    >
+                      Mujer
+                    </span>
+                    <span
+                      onClick={() => confirmarConGenero("M")}
+                      style={{ flex: 1, textAlign: "center", padding: "10px 6px", borderRadius: 10, cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 700, background: COLORS.avatarM, color: COLORS.white }}
+                    >
+                      Varón
+                    </span>
+                  </div>
+                </div>
+              </>
             )}
           </div>
         )}
@@ -2414,9 +2491,9 @@ function ModalHistorial({ alumno, criterios, cursoId, ordenPorCurso, onReordenar
   const mapaTarjetas = new Map(tarjetas.map((t) => [t.criterio.id, t]));
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(34,32,27,0.45)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 70 }} onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()}
-        style={{ background: COLORS.paper, width: "100%", maxWidth: 480, maxHeight: "82vh", overflowY: "auto", borderRadius: "18px 18px 0 0", padding: "18px 16px 90px 16px", boxShadow: "0 -8px 30px rgba(0,0,0,0.25)" }}
+    <div style={{ position: "fixed", inset: 0, background: COLORS.paper, zIndex: 70, overflowY: "auto" }}>
+      <div
+        style={{ width: "100%", maxWidth: 480, margin: "0 auto", minHeight: "100%", padding: "18px 16px 90px 16px" }}
       >
         <div style={{ marginBottom: 12, padding: "0 2px" }}>
           <div style={{ fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 600, color: COLORS.pineDark }}>Registros de {alumno.nombre}</div>
@@ -2846,7 +2923,7 @@ function CorreccionMasiva({ alumnos, criteriosInstancias, periodo, instanciasPor
 // en ese caso se confirma antes de guardar, y el cambio impacta la
 // misma ficha individual del alumno (es el mismo dato).
 // ================================================================
-function CeldaNotaOficial({ valor, tipo, notaAprobacion, onIntentarCambiar, calculado = false }) {
+function CeldaNotaOficial({ valor, tipo, notaAprobacion, onIntentarCambiar, calculado = false, soloLectura = false }) {
   const [editando, setEditando] = useState(false);
   const [borrador, setBorrador] = useState(valor || "");
 
@@ -2863,6 +2940,7 @@ function CeldaNotaOficial({ valor, tipo, notaAprobacion, onIntentarCambiar, calc
   return (
     <input
       value={borrador}
+      readOnly={soloLectura}
       onFocus={() => setEditando(true)}
       onChange={(e) => setBorrador(e.target.value)}
       onBlur={confirmarSalida}
@@ -2873,7 +2951,7 @@ function CeldaNotaOficial({ valor, tipo, notaAprobacion, onIntentarCambiar, calc
         fontFamily: "'IBM Plex Mono', monospace", fontSize: 13,
         fontWeight: calculado && !editando ? 500 : 700, fontStyle: calculado && !editando ? "italic" : "normal",
         color: calculado && !editando ? COLORS.inkSoft : color,
-        padding: "7px 2px", minWidth: 0,
+        padding: "7px 2px", minWidth: 0, cursor: soloLectura ? "default" : "text",
       }}
     />
   );
@@ -3680,6 +3758,7 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
   const [renombrando, setRenombrando] = useState(null); // { key, label } — modal de texto abierto
   const [pendienteRenombre, setPendienteRenombre] = useState(null); // { key, labelNuevo } — falta elegir alcance
   const [tourActivo, setTourActivo] = useState(!tourVisto);
+  const [modoEdicion, setModoEdicion] = useState(false);
   const refGrilla = useRef(null);
   const refNota = useRef(null);
   const refPrimeraColumna = useRef(null);
@@ -3689,7 +3768,7 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
 
   const pasos = [
     { titulo: "Planilla oficial del curso", texto: "Es la misma tabla de 7 columnas que ves en la Ficha de cada alumno, pero de todo el curso junto. Se arma sola con lo que vas cargando.", ref: refGrilla },
-    { titulo: "Corregir una celda", texto: "Tocá cualquier celda para corregirla puntualmente; te va a pedir confirmación antes de guardar el cambio. La columna \"Nota\" se pinta verde o roja según aprobación.", ref: refNota },
+    { titulo: "Corregir una celda", texto: "Tocá \"Editar\" arriba para habilitar la edición. Con eso activo, tocá cualquier celda para corregirla; te va a pedir confirmación antes de guardar el cambio. Tocá \"Listo\" para volver a bloquear la planilla.", ref: refNota },
     { titulo: "Renombrar un encabezado", texto: "Mantené presionado cualquier encabezado (por ejemplo, éste) para cambiarle el nombre, como \"1° bim\" en vez de \"1° inf\". Te va a preguntar si el nuevo nombre aplica solo a este colegio o a todos.", ref: refPrimeraColumna },
     { titulo: "Descargar la planilla", texto: "Bajá la planilla completa, con todos los alumnos y sus notas, en un documento Word listo para imprimir o archivar.", ref: refDescargar },
   ];
@@ -3707,51 +3786,59 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
 
   return (
     <div style={{ position: "fixed", inset: 0, background: COLORS.paper, zIndex: 65, display: "flex", flexDirection: "column" }}>
-      <div style={{ background: COLORS.pineDark, color: COLORS.white, padding: "16px 18px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <button
-            ref={refDescargar}
-            onClick={() => {
-              const html = construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto });
-              generarWordInformes(html, `Planilla de ${curso.nombre}; ${colegio.nombre}`.replace(/[^\w\-; ]/g, ""));
-            }}
-            style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 10, border: `1px solid rgba(255,255,255,0.35)`, background: "transparent", color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
-          >
-            <Printer size={14} strokeWidth={2.4} /> Descargar planilla
-          </button>
+      <div style={{ background: COLORS.pineDark, color: COLORS.white, padding: "10px 18px 12px 18px", position: "relative" }}>
+        <div style={{ position: "absolute", top: 8, right: 12 }}>
           <BotonMenuAyuda onAyuda={() => setTourActivo(true)} />
         </div>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 4 }}>
-          <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 20, fontWeight: 700, color: COLORS.white, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {colegio.nombre}
-          </div>
-          <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 20, fontWeight: 700, color: COLORS.ochreSoft, flexShrink: 0 }}>
-            ·
-          </div>
-          <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 20, fontWeight: 700, color: COLORS.white, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {curso.nombre}
-          </div>
+        <div style={{ display: "flex", alignItems: "baseline", flexWrap: "wrap", gap: "3px 6px", paddingRight: 26 }}>
+          <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: COLORS.ochreSoft }}>{colegio.nombre}</span>
+          <span style={{ color: COLORS.ochreSoft, fontSize: 13 }}>·</span>
+          <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 15, fontWeight: 700, color: COLORS.white }}>{curso.nombre}</span>
+          <span style={{ color: COLORS.ochreSoft, fontSize: 13 }}>·</span>
+          <span style={{ fontFamily: "'Fraunces', serif", fontSize: 15, fontWeight: 600, color: COLORS.white }}>Planilla de Calificaciones</span>
         </div>
-        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 14, fontWeight: 600 }}>Planilla de Calificaciones</div>
-        <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, color: COLORS.ochreSoft, marginTop: 3 }}>
-          Se arma sola con lo cargado en cada alumno. Tocá una celda solo para corregir un error puntual.
-        </div>
-        <div
-          onClick={onTogglePromedioAuto}
-          style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, cursor: "pointer", width: "fit-content" }}
-        >
-          <div style={{
-            width: 34, height: 19, borderRadius: 999, background: promedioAuto ? COLORS.ochre : "rgba(255,255,255,0.25)",
-            position: "relative", transition: "background 0.15s", flexShrink: 0,
-          }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px 10px", marginTop: 10 }}>
+          <div
+            onClick={onTogglePromedioAuto}
+            style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", width: "fit-content" }}
+          >
             <div style={{
-              position: "absolute", top: 2, left: promedioAuto ? 17 : 2, width: 15, height: 15, borderRadius: "50%",
-              background: COLORS.white, transition: "left 0.15s",
-            }} />
+              width: 34, height: 19, borderRadius: 999, background: promedioAuto ? COLORS.ochre : "rgba(255,255,255,0.25)",
+              position: "relative", transition: "background 0.15s", flexShrink: 0,
+            }}>
+              <div style={{
+                position: "absolute", top: 2, left: promedioAuto ? 17 : 2, width: 15, height: 15, borderRadius: "50%",
+                background: COLORS.white, transition: "left 0.15s",
+              }} />
+            </div>
+            <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 600, color: COLORS.white }}>
+              Cálculo de promedio
+            </span>
           </div>
-          <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 600, color: COLORS.white }}>
-            Calcular promedios automáticamente
-          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            <button
+              onClick={() => setModoEdicion((v) => !v)}
+              style={{
+                display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 10,
+                border: modoEdicion ? "none" : `1px solid rgba(255,255,255,0.35)`,
+                background: modoEdicion ? COLORS.ochre : "transparent",
+                color: modoEdicion ? COLORS.pineDark : COLORS.white,
+                fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 700, cursor: "pointer",
+              }}
+            >
+              {modoEdicion ? "Listo" : "Editar"}
+            </button>
+            <button
+              ref={refDescargar}
+              onClick={() => {
+                const html = construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto });
+                generarWordInformes(html, `Planilla de ${curso.nombre}; ${colegio.nombre}`.replace(/[^\w\-; ]/g, ""));
+              }}
+              style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 10, border: `1px solid rgba(255,255,255,0.35)`, background: "transparent", color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+            >
+              <Printer size={14} strokeWidth={2.4} /> Descargar planilla
+            </button>
+          </div>
         </div>
       </div>
 
@@ -3791,6 +3878,7 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
                   calculado={calculadas.has(c.key)}
                   tipo={c.tipo}
                   notaAprobacion={notaAprobacion}
+                  soloLectura={!modoEdicion}
                   onIntentarCambiar={(valorNuevo) => setPendiente({
                     alumnoId: al.id, alumnoNombre: al.nombre, campo: c.key, columnaLabel: c.label,
                     valorAnterior: (al.notasOficiales && al.notasOficiales[c.key]) || "(vacío)",
@@ -4213,6 +4301,7 @@ function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno
   const [recuperatorioAbierto, setRecuperatorioAbierto] = useState(null); // null | "diciembre" | "febrero"
   const [asistenciaAbierta, setAsistenciaAbierta] = useState(false);
   const [informesAbierto, setInformesAbierto] = useState(false);
+  const [menuRecuperatoriosAbierto, setMenuRecuperatoriosAbierto] = useState(false);
   const [editarNotaAprobacionAbierto, setEditarNotaAprobacionAbierto] = useState(false);
   const [tourActivo, setTourActivo] = useState(!tourVisto);
   const refAsistencia = useRef(null);
@@ -4229,12 +4318,8 @@ function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno
     { titulo: "Planilla oficial y recuperatorios", texto: "Desde aquí accedés a la planilla oficial de notas, y a los recuperatorios de Diciembre y Febrero.", ref: refPlanillaGrupo },
     { titulo: "Informes para imprimir", texto: "Este botón genera un informe en PDF o Word con las notas y el seguimiento de cada alumno, listo para entregar a las familias.", ref: refInformes },
     { titulo: "Sumar alumnos", texto: "Escribí un Apellido y Nombre y presioná Enter para agregarlo rápido; tocá un alumno para abrir su ficha.", ref: refAlumnos },
-    { titulo: "Botones F / M", texto: "Antes de agregar un alumno, elegí su género con los botones F / M. Esto no es solo un dato: define el color con el que se muestra su nombre en todas las planillas, para que puedas identificar a cada alumno de un vistazo.", ref: refAlumnos },
+    { titulo: "Mujer o Varón", texto: "Al tocar \"Agregar\" (o presionar Enter), aparece un cartel para elegir Mujer o Varón. Al tocar una opción, se guarda el alumno directamente. No es solo un dato: define el color con el que se muestra el nombre en todas las planillas, para identificar a cada alumno de un vistazo.", ref: refAlumnos },
   ];
-
-  const texto = alumnos.length === 0
-    ? "Cargá aquí los Apellidos y Nombres de tus alumnos. Escribí el primero y presioná Enter (o tocá Agregar): el siguiente casillero se abre solo."
-    : null;
 
   const criteriosInstancias = criterios.filter((c) => c.tipo === "numerico_instancias" && c.activadoEnCursos.includes(curso.id));
   const alumnosFiltrados = alumnos.filter((a) => a.nombre.toLowerCase().includes(busqueda.toLowerCase()));
@@ -4242,62 +4327,75 @@ function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno
   return (
     <div>
       <EncabezadoNav
-        eyebrow={curso.materia ? `${colegio.nombre} · ${curso.materia}` : colegio.nombre}
-        titulo={curso.nombre}
-        subtitulo={alumnos.length === 0 ? "Sin alumnos cargados todavía" : `${alumnos.length} alumno${alumnos.length === 1 ? "" : "s"}`}
+        partes={{ colegio: colegio.nombre, curso: curso.nombre, materia: curso.materia }}
         onAyuda={() => setTourActivo(true)}
         accion={
           <button
             ref={refAsistencia}
             onClick={() => setAsistenciaAbierta(true)}
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 12px", borderRadius: 999, border: "none", background: COLORS.ochre, color: COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+            style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 999, border: "none", background: COLORS.ochre, color: COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
           >
-            <ClipboardCheck size={14} strokeWidth={2.4} /> Asistencia
+            <ClipboardCheck size={13} strokeWidth={2.4} /> Asistencia
           </button>
         }
       />
-      <div style={{ padding: "14px 16px 90px 16px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 8, flexWrap: "nowrap" }}>
+      <div style={{ padding: "10px 16px 90px 16px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6, flexWrap: "nowrap" }}>
           <SelectorPeriodo periodo={periodo} onChange={onCambiarPeriodo} />
           <button
             ref={refCargaMasiva}
             onClick={() => criteriosInstancias.length > 0 && setMasivaAbierta(true)}
-            style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 12px", borderRadius: 999, border: `1.5px solid ${COLORS.pine}`, background: "transparent", color: COLORS.pine, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 600, cursor: criteriosInstancias.length > 0 ? "pointer" : "default", opacity: criteriosInstancias.length > 0 ? 1 : 0.45, whiteSpace: "nowrap", flexShrink: 0 }}
+            style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 10px", borderRadius: 999, border: `1.5px solid ${COLORS.pine}`, background: "transparent", color: COLORS.pine, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, fontWeight: 600, cursor: criteriosInstancias.length > 0 ? "pointer" : "default", opacity: criteriosInstancias.length > 0 ? 1 : 0.45, whiteSpace: "nowrap", flexShrink: 0 }}
           >
-            <ClipboardList size={13} strokeWidth={2.4} /> Carga masiva
+            <ClipboardList size={12} strokeWidth={2.4} /> Carga masiva
           </button>
         </div>
 
-        <div ref={refPlanillaGrupo} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+        <div ref={refPlanillaGrupo} style={{ display: "flex", gap: 6, marginBottom: 6 }}>
           <button
             onClick={() => setPlanillaAbierta(true)}
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, flex: 1, padding: "8px 8px", borderRadius: 10, border: `1px solid ${COLORS.line}`, background: COLORS.white, color: COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, flex: 1, padding: "6px 8px", borderRadius: 10, border: `1px solid ${COLORS.line}`, background: COLORS.white, color: COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
           >
             <ClipboardList size={13} strokeWidth={2.4} /> Planilla
           </button>
-          <button
-            onClick={() => setRecuperatorioAbierto("diciembre")}
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, flex: 1, padding: "8px 6px", borderRadius: 10, border: `1px solid ${COLORS.ochre}`, background: COLORS.white, color: COLORS.ochre, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
-          >
-            Diciembre
-          </button>
-          <button
-            onClick={() => setRecuperatorioAbierto("febrero")}
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, flex: 1, padding: "8px 6px", borderRadius: 10, border: `1px solid ${COLORS.rose}`, background: COLORS.white, color: COLORS.rose, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
-          >
-            Febrero
-          </button>
+
+          <div style={{ position: "relative", flex: 1 }}>
+            <button
+              onClick={() => setMenuRecuperatoriosAbierto((v) => !v)}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, width: "100%", padding: "6px 8px", borderRadius: 10, border: `1px solid ${COLORS.ochre}`, background: COLORS.white, color: COLORS.ochre, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+            >
+              Recuperatorios <ChevronLeft size={12} strokeWidth={2.6} style={{ transform: "rotate(-90deg)" }} />
+            </button>
+            {menuRecuperatoriosAbierto && (
+              <>
+                <div onClick={() => setMenuRecuperatoriosAbierto(false)} style={{ position: "fixed", inset: 0, zIndex: 95 }} />
+                <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, background: COLORS.white, borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.28)", padding: 6, zIndex: 96 }}>
+                  <div
+                    onClick={() => { setRecuperatorioAbierto("diciembre"); setMenuRecuperatoriosAbierto(false); }}
+                    style={{ padding: "9px 10px", borderRadius: 8, color: COLORS.ochre, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                  >
+                    Diciembre
+                  </div>
+                  <div
+                    onClick={() => { setRecuperatorioAbierto("febrero"); setMenuRecuperatoriosAbierto(false); }}
+                    style={{ padding: "9px 10px", borderRadius: 8, color: COLORS.rose, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                  >
+                    Febrero
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
           <button
             ref={refInformes}
             onClick={() => setInformesAbierto(true)}
             title="Informes para imprimir"
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, flexShrink: 0, padding: "8px 10px", borderRadius: 10, border: `1px solid ${COLORS.line}`, background: COLORS.white, color: COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, flexShrink: 0, padding: "6px 10px", borderRadius: 10, border: `1px solid ${COLORS.line}`, background: COLORS.white, color: COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
           >
             <Printer size={14} strokeWidth={2.4} /> Informe
           </button>
         </div>
-
-        {texto && <CuadroGuia texto={texto} />}
 
         <div ref={refCriterios} style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
           <SeccionCriterios
@@ -5197,11 +5295,11 @@ export default function CISDNavegacion() {
       <div style={{ width: "100%", maxWidth: 480 }}>
         {pantalla === "colegios" && (
           <>
-            <div style={{ background: COLORS.pineDark, padding: "12px 18px 14px 18px", color: COLORS.white }}>
-              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <div style={{ background: COLORS.pineDark, padding: "8px 18px 8px 18px", color: COLORS.white, position: "relative" }}>
+              <div style={{ position: "absolute", top: 5, right: 10 }}>
                 <BotonMenuAyuda onAyuda={() => refAyudaColegios.current && refAyudaColegios.current()} />
               </div>
-              <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: COLORS.ochreSoft, letterSpacing: 0.4, marginBottom: 4 }}>
+              <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 15, fontWeight: 700, color: COLORS.ochreSoft, letterSpacing: 0.4, marginBottom: 2, paddingRight: 26 }}>
                 CISD
               </div>
               <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 600 }}>Mis colegios</div>
