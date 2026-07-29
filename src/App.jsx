@@ -327,6 +327,109 @@ function CuadroGuia({ texto, compacto }) {
   );
 }
 
+// Detecta si la app se está viendo en una pantalla ancha (computadora) o
+// angosta (celular/tablet en vertical), para adaptar el diseño sin cambiar
+// ninguna función. El umbral (900px) separa un celular grande/tablet
+// vertical de una notebook o monitor.
+function useEsEscritorio() {
+  const [esEscritorio, setEsEscritorio] = useState(
+    typeof window !== "undefined" ? window.innerWidth >= 900 : false
+  );
+  useEffect(() => {
+    function chequear() { setEsEscritorio(window.innerWidth >= 900); }
+    window.addEventListener("resize", chequear);
+    return () => window.removeEventListener("resize", chequear);
+  }, []);
+  return esEscritorio;
+}
+
+// Menú lateral fijo que solo se muestra en pantallas anchas (computadora).
+// Deja siempre a la vista los colegios y sus cursos, para moverse entre
+// ellos sin perder de vista dónde se está parado. No reemplaza ninguna
+// pantalla ni botón existente: es un atajo adicional.
+function SidebarEscritorio({ colegios, cursosPorColegio, colegioId, cursoId, onIrAInicio, onIrAColegio, onIrACurso }) {
+  const [expandido, setExpandido] = useState(() => (colegioId ? { [colegioId]: true } : {}));
+
+  useEffect(() => {
+    if (colegioId) setExpandido((prev) => ({ ...prev, [colegioId]: true }));
+  }, [colegioId]);
+
+  return (
+    <div
+      style={{
+        width: 260, flexShrink: 0, minHeight: "100vh", background: COLORS.pineDark, color: COLORS.white,
+        padding: "20px 14px", position: "sticky", top: 0, alignSelf: "flex-start", overflowY: "auto", maxHeight: "100vh",
+      }}
+    >
+      <div
+        onClick={onIrAInicio}
+        style={{ cursor: "pointer", marginBottom: 18, paddingLeft: 4 }}
+      >
+        <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 700, color: COLORS.ochreSoft, letterSpacing: 0.5 }}>CISD</div>
+        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 600 }}>Mis colegios</div>
+      </div>
+
+      {colegios.length === 0 && (
+        <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, color: COLORS.ochreSoft, padding: "0 4px" }}>
+          Agregá tu primer colegio para empezar.
+        </div>
+      )}
+
+      {colegios.map((col) => {
+        const abierto = !!expandido[col.id];
+        const activo = colegioId === col.id;
+        const cursosDelColegio = cursosPorColegio[col.id] || [];
+        return (
+          <div key={col.id} style={{ marginBottom: 4 }}>
+            <div
+              onClick={() => {
+                setExpandido((prev) => ({ ...prev, [col.id]: !abierto || !activo }));
+                onIrAColegio(col);
+              }}
+              style={{
+                display: "flex", alignItems: "center", gap: 8, padding: "8px 8px", borderRadius: 10, cursor: "pointer",
+                background: activo && !cursoId ? "rgba(255,255,255,0.14)" : "transparent",
+              }}
+            >
+              <ChevronRight size={13} strokeWidth={2.4} style={{ transform: abierto ? "rotate(90deg)" : "none", transition: "transform 0.12s", flexShrink: 0, opacity: 0.7 }} />
+              <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {col.nombre}
+              </span>
+            </div>
+            {abierto && (
+              <div style={{ paddingLeft: 24, marginTop: 2, marginBottom: 4 }}>
+                {cursosDelColegio.length === 0 && (
+                  <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: "rgba(255,255,255,0.5)", padding: "5px 8px" }}>
+                    Sin cursos todavía
+                  </div>
+                )}
+                {cursosDelColegio.map((curso) => {
+                  const activoCurso = activo && cursoId === curso.id;
+                  return (
+                    <div
+                      key={curso.id}
+                      onClick={() => onIrACurso(col, curso)}
+                      style={{
+                        padding: "6px 8px", borderRadius: 8, cursor: "pointer", marginBottom: 1,
+                        background: activoCurso ? COLORS.ochre : "transparent",
+                        color: activoCurso ? COLORS.pineDark : COLORS.white,
+                        fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: activoCurso ? 700 : 500,
+                        whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                      }}
+                    >
+                      {curso.nombre}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function Toast({ text, show }) {
   return (
     <div
@@ -3773,8 +3876,9 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
     { titulo: "Descargar la planilla", texto: "Bajá la planilla completa, con todos los alumnos y sus notas, en un documento Word listo para imprimir o archivar.", ref: refDescargar },
   ];
 
-  const anchoNombre = 150;
-  const anchoColumna = 62;
+  const esEscritorio = useEsEscritorio();
+  const anchoNombre = esEscritorio ? 190 : 150;
+  const anchoColumna = esEscritorio ? 76 : 62;
 
   function confirmarNuevoNombre(labelNuevo) {
     const key = renombrando.key;
@@ -4725,6 +4829,7 @@ export default function CISDNavegacion() {
   const [pasoBienvenida, setPasoBienvenida] = useState("intro"); // "intro" | "nombre"
   const [mostrarCambiarNombre, setMostrarCambiarNombre] = useState(false);
   const [cargadoPerfil, setCargadoPerfil] = useState(false);
+  const esEscritorio = useEsEscritorio();
 
   // Habilita "Cambiar nombre" desde el menú "⋮" de cualquier pantalla.
   useEffect(() => {
@@ -5278,7 +5383,7 @@ export default function CISDNavegacion() {
   else if (colegioActual) pantalla = "cursos";
 
   return (
-    <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", background: COLORS.paper, minHeight: "100vh", display: "flex", justifyContent: "center" }}>
+    <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", background: COLORS.paper, minHeight: "100vh", display: "flex", justifyContent: esEscritorio ? "flex-start" : "center" }}>
       <style>{`@import url('${FONT_URL}');
         * { box-sizing: border-box; }
         button:focus-visible, span:focus-visible { outline: 2px solid ${COLORS.ochre}; outline-offset: 2px; }
@@ -5292,7 +5397,19 @@ export default function CISDNavegacion() {
         .tilde-anim { display: inline-block; animation: tildePop 300ms ease forwards; }
       `}</style>
 
-      <div style={{ width: "100%", maxWidth: 480 }}>
+      {esEscritorio && (
+        <SidebarEscritorio
+          colegios={colegios}
+          cursosPorColegio={cursosPorColegio}
+          colegioId={colegioId}
+          cursoId={cursoId}
+          onIrAInicio={() => { setColegioId(null); setCursoId(null); setFichaAlumnoId(null); }}
+          onIrAColegio={(col) => { setColegioId(col.id); setCursoId(null); setFichaAlumnoId(null); }}
+          onIrACurso={(col, curso) => { setColegioId(col.id); setCursoId(curso.id); setFichaAlumnoId(null); }}
+        />
+      )}
+
+      <div style={{ width: "100%", maxWidth: esEscritorio ? 760 : 480, margin: esEscritorio ? "0 auto" : 0, flex: esEscritorio ? "1 1 0%" : "none", minWidth: 0 }}>
         {pantalla === "colegios" && (
           <>
             <div style={{ background: COLORS.pineDark, padding: "8px 18px 8px 18px", color: COLORS.white, position: "relative" }}>
