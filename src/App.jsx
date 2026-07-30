@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { supabase } from "./lib/supabaseClient.js";
 import {
   Hand, ClipboardCheck, Folder, Smile, StickyNote, Search, ClipboardList,
   SlidersHorizontal, Plus, GraduationCap, School, ChevronLeft, ChevronRight, UserPlus,
@@ -5458,7 +5459,7 @@ function PantallaSaludoFranja({ nombre, franja, indiceFraseAnterior, onContinuar
   );
 }
 
-export default function CISDNavegacion() {
+function CISDNavegacion() {
   const [colegios, setColegios] = useState(COLEGIOS_SEED);
   const [cursos, setCursos] = useState(CURSOS_SEED);
   const [alumnosPorCurso, setAlumnosPorCurso] = useState(ALUMNOS_SEED);
@@ -6320,4 +6321,117 @@ export default function CISDNavegacion() {
       <Toast show={toast.show} text={toast.text} />
     </div>
   );
+}
+
+// Pantalla que se muestra antes de entrar a la app: pide el correo del
+// docente y le manda un link mágico para iniciar sesión (sin contraseña
+// que recordar). Al tocar el link del mail, Supabase detecta sola la
+// sesión y AuthGate deja pasar a la app.
+function PantallaLogin() {
+  const [correo, setCorreo] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [enviado, setEnviado] = useState(false);
+  const [error, setError] = useState("");
+
+  async function enviarLink() {
+    const limpio = correo.trim();
+    if (!limpio || !limpio.includes("@")) {
+      setError("Escribí un correo válido.");
+      return;
+    }
+    setError("");
+    setEnviando(true);
+    const { error: err } = await supabase.auth.signInWithOtp({
+      email: limpio,
+      options: { emailRedirectTo: window.location.origin },
+    });
+    setEnviando(false);
+    if (err) {
+      setError("No se pudo enviar el correo. Probá de nuevo en un momento.");
+      return;
+    }
+    setEnviado(true);
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", background: COLORS.paper, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <style>{`@import url('${FONT_URL}'); * { box-sizing: border-box; }`}</style>
+      <div style={{ width: "100%", maxWidth: 360, textAlign: "center" }}>
+        <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 700, color: COLORS.ochre, letterSpacing: 0.5, marginBottom: 6 }}>CISD</div>
+        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 26, fontWeight: 600, color: COLORS.pineDark, marginBottom: 8 }}>
+          {enviado ? "Revisá tu correo" : "Ingresá tu correo"}
+        </div>
+
+        {enviado ? (
+          <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, color: COLORS.inkSoft, lineHeight: 1.5 }}>
+            Te mandamos un link a <strong>{correo.trim()}</strong>. Abrilo desde este mismo dispositivo para entrar.
+          </div>
+        ) : (
+          <>
+            <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, color: COLORS.inkSoft, marginBottom: 18, lineHeight: 1.5 }}>
+              Te vamos a mandar un link para entrar, sin necesidad de contraseña.
+            </div>
+            <input
+              type="email"
+              value={correo}
+              onChange={(e) => setCorreo(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") enviarLink(); }}
+              placeholder="tu-correo@ejemplo.com"
+              autoFocus
+              style={{ width: "100%", padding: "12px 14px", borderRadius: 12, border: `1.5px solid ${COLORS.line}`, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 15, color: COLORS.ink, marginBottom: 10, textAlign: "center" }}
+            />
+            {error && (
+              <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, color: COLORS.rose, marginBottom: 10 }}>{error}</div>
+            )}
+            <button
+              onClick={enviarLink}
+              disabled={enviando}
+              style={{
+                width: "100%", padding: "12px", borderRadius: 999, border: "none", cursor: enviando ? "default" : "pointer",
+                background: COLORS.pine, color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14.5, fontWeight: 700,
+                opacity: enviando ? 0.6 : 1,
+              }}
+            >
+              {enviando ? "Enviando…" : "Enviarme el link"}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Portón de acceso: mientras se confirma si hay sesión iniciada, muestra
+// un loader. Sin sesión, muestra la pantalla de login. Con sesión activa,
+// deja pasar directo a la app.
+function AuthGate() {
+  const [cargando, setCargando] = useState(true);
+  const [sesion, setSesion] = useState(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSesion(data.session);
+      setCargando(false);
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_evento, nuevaSesion) => {
+      setSesion(nuevaSesion);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  if (cargando) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: COLORS.paper }}>
+        <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, color: COLORS.inkSoft }}>Cargando…</div>
+      </div>
+    );
+  }
+
+  if (!sesion) return <PantallaLogin />;
+
+  return <CISDNavegacion />;
+}
+
+export default function App() {
+  return <AuthGate />;
 }
