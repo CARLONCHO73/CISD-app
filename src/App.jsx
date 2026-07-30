@@ -73,6 +73,22 @@ function codigoDiaSemana(fechaStr) {
   const d = new Date(fechaStr + "T00:00:00");
   return DIAS_SEMANA[d.getDay()].code;
 }
+
+// diasClaseConfig históricamente era un array de códigos de día (ej. ["LU","JU"]).
+// Ahora cada día puede tener además un horario de inicio/fin (ej. { dia: "LU",
+// inicio: "08:00", fin: "08:40" }). Estas funciones entienden ambos formatos,
+// para que los datos ya guardados por un docente no se rompan.
+function diaConfigCodigo(item) {
+  return typeof item === "string" ? item : item.dia;
+}
+function tieneDiaConfigurado(diasClaseConfig, codigo) {
+  return (diasClaseConfig || []).some((item) => diaConfigCodigo(item) === codigo);
+}
+function obtenerBloqueDia(diasClaseConfig, codigo) {
+  const item = (diasClaseConfig || []).find((i) => diaConfigCodigo(i) === codigo);
+  if (!item) return null;
+  return typeof item === "string" ? { dia: item, inicio: "", fin: "" } : item;
+}
 function formatFechaLarga(fechaStr) {
   const d = new Date(fechaStr + "T00:00:00");
   const texto = d.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
@@ -347,7 +363,7 @@ function useEsEscritorio() {
 // Deja siempre a la vista los colegios y sus cursos, para moverse entre
 // ellos sin perder de vista dónde se está parado. No reemplaza ninguna
 // pantalla ni botón existente: es un atajo adicional.
-function SidebarEscritorio({ colegios, cursosPorColegio, colegioId, cursoId, onIrAInicio, onIrAColegio, onIrACurso }) {
+function SidebarEscritorio({ colegios, cursosPorColegio, colegioId, cursoId, onIrAInicio, onIrAColegio, onIrACurso, onIrAHorario, onIrANotas }) {
   const [expandido, setExpandido] = useState(() => (colegioId ? { [colegioId]: true } : {}));
 
   useEffect(() => {
@@ -363,10 +379,25 @@ function SidebarEscritorio({ colegios, cursosPorColegio, colegioId, cursoId, onI
     >
       <div
         onClick={onIrAInicio}
-        style={{ cursor: "pointer", marginBottom: 18, paddingLeft: 4 }}
+        style={{ cursor: "pointer", marginBottom: 10, paddingLeft: 4 }}
       >
         <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 700, color: COLORS.ochreSoft, letterSpacing: 0.5 }}>CISD</div>
         <div style={{ fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 600 }}>Mis colegios</div>
+      </div>
+
+      <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+        <div
+          onClick={onIrAHorario}
+          style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer", padding: "6px 8px", borderRadius: 8, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 600, color: COLORS.ochreSoft }}
+        >
+          <CalendarDays size={13} strokeWidth={2.4} /> Horario
+        </div>
+        <div
+          onClick={onIrANotas}
+          style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer", padding: "6px 8px", borderRadius: 8, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 600, color: COLORS.ochreSoft }}
+        >
+          <StickyNote size={13} strokeWidth={2.4} /> Bitácora
+        </div>
       </div>
 
       {colegios.length === 0 && (
@@ -3428,7 +3459,7 @@ function CalendarioAsistencia({ fechaInicial, diasCurso, diasClaseConfig, onSele
               const esSeleccionado = fechaCelda === fechaInicial;
               const esHoy = fechaCelda === hoy;
               const codigoSemana = DIAS_SEMANA[new Date(anio, mes, dia).getDay()].code;
-              const esDiaConfigurado = (diasClaseConfig || []).includes(codigoSemana);
+              const esDiaConfigurado = tieneDiaConfigurado(diasClaseConfig, codigoSemana);
               const filaIndex = Math.floor(i / 7);
               const mostrarArriba = filaIndex >= totalFilas - 2;
 
@@ -3511,20 +3542,17 @@ function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlte
   const [pendienteCelda, setPendienteCelda] = useState(null); // { alumnoId }
   const [autorizadoEdicionPasada, setAutorizadoEdicionPasada] = useState(false);
   const [confirmarSobrescribir, setConfirmarSobrescribir] = useState(false);
-  const [configAbierta, setConfigAbierta] = useState(false);
   const [calendarioAbierto, setCalendarioAbierto] = useState(false);
   const [tourActivo, setTourActivo] = useState(!tourVisto);
   const refFecha = useRef(null);
   const refMotivo = useRef(null);
   const refCelda = useRef(null);
-  const refConfig = useRef(null);
   const refCalendario = useRef(null);
 
   const pasos = [
     { titulo: "Tomar asistencia", texto: "Por defecto es el día de hoy. Usá las flechas para ir al día anterior o siguiente, o tocá la fecha para elegir cualquier día del calendario.", ref: refFecha },
     { titulo: "Día no trabajado", texto: "Si no hubo clase (licencia, artículo, etc.), marcalo aquí y detallá el motivo. Ese día se pinta gris y no cuenta para el % de asistencia.", ref: refMotivo },
     { titulo: "Marcar a cada alumno", texto: "Tocá el casillero de un alumno para ir alternando: presente (blanco) → ausente (rojo, A) → tardanza (naranja, T) → justificado (celeste, J).", ref: refCelda },
-    { titulo: "Días de clase (orientativo)", texto: "Configurá qué días de la semana dictás este curso. Solo resalta esos días en el calendario, no restringe nada.", ref: refConfig },
     { titulo: "Calendario del mes", texto: "Acá ves el mes completo: los días pintados de naranja son los marcados como no trabajado. Tocá uno para ver el motivo, editarlo o quitar la marca.", ref: refCalendario },
   ];
 
@@ -3533,7 +3561,7 @@ function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlte
   const diaActual = diasCurso[fecha] || { motivo: null, marcas: {} };
   const noTrabajado = !!diaActual.motivo;
   const diaSemana = codigoDiaSemana(fecha);
-  const esDiaConfigurado = (diasClaseConfig || []).includes(diaSemana);
+  const esDiaConfigurado = tieneDiaConfigurado(diasClaseConfig, diaSemana);
 
   function intentarAlternar(alumnoId) {
     if (noTrabajado) return;
@@ -3616,29 +3644,17 @@ function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlte
           <span onClick={() => setFecha(sumarDiasFecha(fecha, 1))} style={flechaBtnStyle}><ChevronRight size={18} strokeWidth={2.4} /></span>
         </div>
 
-        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+        <div style={{ marginTop: 10 }}>
           <button
             ref={refMotivo}
             onClick={onTocarBotonMotivo}
             style={{
-              flex: 1, minWidth: 0, padding: "8px", borderRadius: 10, cursor: "pointer",
+              width: "100%", padding: "8px", borderRadius: 10, cursor: "pointer",
               border: `1px solid ${COLORS.ochre}`, background: noTrabajado ? COLORS.ochre : COLORS.ochreSoft,
               color: noTrabajado ? COLORS.white : COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 600,
             }}
           >
             {noTrabajado ? `Día no trabajado: ${diaActual.motivo} (tocar para editar)` : "Marcar día no trabajado"}
-          </button>
-
-          <button
-            ref={refConfig}
-            onClick={() => setConfigAbierta((v) => !v)}
-            style={{
-              flex: 1, minWidth: 0, padding: "8px", borderRadius: 10, cursor: "pointer",
-              border: `1px solid ${COLORS.ochre}`, background: configAbierta ? COLORS.ochre : COLORS.ochreSoft,
-              color: configAbierta ? COLORS.white : COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 600,
-            }}
-          >
-            {configAbierta ? "Ocultar días de clase" : "Configurar días de clases en este curso"}
           </button>
         </div>
 
@@ -3655,35 +3671,9 @@ function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlte
           <CalendarDays size={14} strokeWidth={2.2} /> Ver calendario del mes
         </button>
 
-        {configAbierta && (
-          <div style={{ marginTop: 6 }}>
-            <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, color: COLORS.inkSoft, marginBottom: 5 }}>
-              Solo resalta esos días en el calendario, no restringe nada.
-            </div>
-            <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-              {DIAS_SEMANA.map((d) => {
-                const activo = (diasClaseConfig || []).includes(d.code);
-                return (
-                  <span
-                    key={d.code}
-                    onClick={() => {
-                      const base = diasClaseConfig || [];
-                      const nuevo = activo ? base.filter((c) => c !== d.code) : [...base, d.code];
-                      onSetDiasClase(nuevo);
-                    }}
-                    style={{
-                      padding: "5px 9px", borderRadius: 999, fontSize: 11.5, fontWeight: 600, cursor: "pointer",
-                      fontFamily: "'IBM Plex Sans', sans-serif", background: activo ? COLORS.ochre : COLORS.paperDim,
-                      color: activo ? COLORS.pineDark : COLORS.inkSoft,
-                    }}
-                  >
-                    {d.label}
-                  </span>
-                );
-              })}
-            </div>
-          </div>
-        )}
+        <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, color: COLORS.inkSoft, marginTop: 6, textAlign: "center" }}>
+          El horario de este curso se carga desde "Mi horario".
+        </div>
       </div>
 
       <div style={{ flex: 1, overflowY: "auto", padding: "10px 12px 24px 12px" }}>
@@ -4398,6 +4388,707 @@ function ModalInformesTutores({ colegio, curso, alumnos, criteriosActivos, notaA
   );
 }
 
+// Junta, en una sola vista semanal, los horarios que el docente ya marcó
+// en "Asistencia → días de clase" de cada curso. No pide cargar nada de
+// nuevo: solo reordena por horario lo que ya existe.
+// Paleta de colores para diferenciar colegios a simple vista en la grilla
+// de horario (como el naranja/verde de una planilla armada a mano). Se
+// asigna siempre el mismo color al mismo colegio, por orden de aparición.
+const PALETA_COLEGIOS = [
+  { fondo: "#F3C77A", texto: "#5C3B0A", borde: "#D9A94E" }, // ocre/naranja
+  { fondo: "#9FCBA8", texto: "#0F3D22", borde: "#6FA97F" }, // verde
+  { fondo: "#A9C6E8", texto: "#0E2E52", borde: "#7FA6D4" }, // celeste
+  { fondo: "#E3A7B8", texto: "#5A1A2A", borde: "#CB7C93" }, // rosado
+  { fondo: "#CBB8E0", texto: "#3A215A", borde: "#A98BC9" }, // lila
+  { fondo: "#E3C398", texto: "#4A2F0C", borde: "#C79F63" }, // arena
+];
+function colorDeColegio(colegios, colegioId) {
+  const indice = colegios.findIndex((c) => c.id === colegioId);
+  return PALETA_COLEGIOS[(indice >= 0 ? indice : 0) % PALETA_COLEGIOS.length];
+}
+function minutosDesdeHora(hhmm) {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+}
+
+// Grilla visual del horario semanal: un día por columna, y cada clase
+// ocupa un bloque cuyo tamaño es proporcional a su duración real (un
+// módulo de 80 minutos se ve el doble de alto que uno de 40), con un
+// color fijo por colegio para identificar todo de un vistazo.
+function GrillaHorarioSemanal({ colegios, bloquesPorDia, diasHorario, nombreDia, onTocarBloque, refReferenciaColores }) {
+  const PX_POR_MINUTO = 1.0;
+
+  const todosLosBloques = [];
+  diasHorario.forEach((d) => {
+    bloquesPorDia[d.code].forEach((b) => {
+      if (b.inicio && b.fin) todosLosBloques.push(b);
+    });
+  });
+  const sinHorario = [];
+  diasHorario.forEach((d) => {
+    bloquesPorDia[d.code].forEach((b) => {
+      if (!b.inicio || !b.fin) sinHorario.push({ ...b, dia: d.code });
+    });
+  });
+
+  let inicioGrilla = 8 * 60;
+  let finGrilla = 18 * 60;
+  if (todosLosBloques.length > 0) {
+    const inicios = todosLosBloques.map((b) => minutosDesdeHora(b.inicio));
+    const fines = todosLosBloques.map((b) => minutosDesdeHora(b.fin));
+    inicioGrilla = Math.floor(Math.min(...inicios) / 60) * 60;
+    finGrilla = Math.ceil(Math.max(...fines) / 60) * 60;
+  }
+  const alturaTotal = (finGrilla - inicioGrilla) * PX_POR_MINUTO;
+
+  const marcasHora = [];
+  for (let m = inicioGrilla; m <= finGrilla; m += 60) marcasHora.push(m);
+
+  return (
+    <div>
+      <div ref={refReferenciaColores} style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+        {colegios.map((col, i) => (
+          <div key={col.id} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <span style={{ width: 12, height: 12, borderRadius: 4, background: PALETA_COLEGIOS[i % PALETA_COLEGIOS.length].fondo, display: "inline-block", flexShrink: 0 }} />
+            <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, color: COLORS.inkSoft }}>{col.nombre}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ overflowX: "auto", border: `1px solid ${COLORS.line}`, borderRadius: 12, background: COLORS.white }}>
+        <div style={{ display: "flex", minWidth: 560 }}>
+          <div style={{ width: 46, flexShrink: 0, borderRight: `1px solid ${COLORS.line}`, position: "relative", height: alturaTotal }}>
+            {marcasHora.map((m) => (
+              <div
+                key={m}
+                style={{
+                  position: "absolute", top: (m - inicioGrilla) * PX_POR_MINUTO - 7, left: 0, right: 4,
+                  textAlign: "right", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, fontWeight: 600, color: COLORS.inkSoft,
+                }}
+              >
+                {String(Math.floor(m / 60)).padStart(2, "0")}:00
+              </div>
+            ))}
+          </div>
+
+          {diasHorario.map((d) => (
+            <div key={d.code} style={{ flex: 1, minWidth: 88, position: "relative", height: alturaTotal, borderRight: `1px solid ${COLORS.line}` }}>
+              <div style={{
+                position: "sticky", top: 0, textAlign: "center", padding: "6px 2px", fontFamily: "'IBM Plex Sans', sans-serif",
+                fontSize: 11.5, fontWeight: 700, color: COLORS.pineDark, background: COLORS.paperDim, borderBottom: `1px solid ${COLORS.line}`,
+              }}>
+                {d.label}
+              </div>
+              {marcasHora.map((m) => (
+                <div key={m} style={{ position: "absolute", top: (m - inicioGrilla) * PX_POR_MINUTO, left: 0, right: 0, borderTop: `1px solid ${COLORS.paperDim}` }} />
+              ))}
+              {bloquesPorDia[d.code].filter((b) => b.inicio && b.fin).map((b, i) => {
+                const inicioMin = minutosDesdeHora(b.inicio);
+                const finMin = minutosDesdeHora(b.fin);
+                const color = colorDeColegio(colegios, b.colegio.id);
+                return (
+                  <div
+                    key={i}
+                    onClick={() => onTocarBloque(b.colegio, b.curso)}
+                    style={{
+                      position: "absolute", top: (inicioMin - inicioGrilla) * PX_POR_MINUTO + 1, left: 2, right: 2,
+                      height: (finMin - inicioMin) * PX_POR_MINUTO - 2, background: color.fondo, border: `1px solid ${color.borde}`,
+                      borderRadius: 8, padding: "4px 5px", overflow: "hidden", cursor: "pointer", boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", gap: 1,
+                    }}
+                  >
+                    <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 10, fontWeight: 700, color: color.texto, opacity: 0.9 }}>
+                      {b.inicio}-{b.fin}
+                    </div>
+                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: 12, fontWeight: 600, color: color.texto, lineHeight: 1.25, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>
+                      {b.curso.nombre}{b.curso.materia ? ` · ${b.curso.materia}` : ""}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {sinHorario.length > 0 && (
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 700, color: COLORS.inkSoft, marginBottom: 6 }}>
+            Sin horario definido todavía
+          </div>
+          {sinHorario.map((b, i) => (
+            <div
+              key={i}
+              onClick={() => onTocarBloque(b.colegio, b.curso)}
+              style={{
+                display: "flex", alignItems: "center", gap: 8, padding: "7px 10px", marginBottom: 5,
+                background: COLORS.paperDim, borderRadius: 10, cursor: "pointer",
+              }}
+            >
+              <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, fontWeight: 700, color: COLORS.pineDark }}>{nombreDia[b.dia]}</span>
+              <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, color: COLORS.inkSoft }}>
+                {b.curso.nombre}{b.curso.materia ? ` · ${b.curso.materia}` : ""} — {b.colegio.nombre}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Pantalla "Mi horario": se navega igual que el resto de la app (colegios
+// → cursos), y al entrar a un curso se abre el editor de bloques de
+// horario de ESE curso. Permite cargar cuantos bloques se necesiten por
+// día (incluso varios el mismo día para el mismo curso, para el caso de
+// un docente con dos módulos separados de la misma materia). También hay
+// una vista "semana armada" que junta todo lo cargado en un solo vistazo.
+// Espacio libre para que el docente anote reuniones, ideas o cualquier
+// cosa que se le ocurra. Cada nota puede quedar suelta, o atada a un
+// colegio/curso puntual (por ejemplo "Pedir el aula de música" para 3° A).
+function PantallaNotas({ colegios, cursosPorColegio, notas, onAgregarNota, onEditarNota, onEliminarNota, onVolver, tourVisto, onMarcarTourVisto }) {
+  const [formAbierto, setFormAbierto] = useState(false);
+  const [texto, setTexto] = useState("");
+  const [colegioIdSel, setColegioIdSel] = useState("");
+  const [cursoIdSel, setCursoIdSel] = useState("");
+  const [editandoId, setEditandoId] = useState(null);
+  const [textoEdicion, setTextoEdicion] = useState("");
+  const [filtro, setFiltro] = useState("todas"); // "todas" | "generales" | "curso"
+  const [tourActivo, setTourActivo] = useState(!tourVisto);
+  const refNuevaNota = useRef(null);
+  const refFiltros = useRef(null);
+
+  const pasos = [
+    { titulo: "Anotá lo que quieras", texto: "Reuniones, ideas, recordatorios, cualquier cosa que se te ocurra. Podés dejarla suelta, o atarla a un colegio/curso puntual si querés que quede relacionada con él.", ref: refNuevaNota },
+    { titulo: "Filtrá tus notas", texto: "Mostrá todas, solo las generales, o solo las que atastes a un curso, para encontrar lo que buscás más rápido.", ref: refFiltros },
+  ];
+
+  function nombreCurso(cursoId) {
+    for (const col of colegios) {
+      const curso = (cursosPorColegio[col.id] || []).find((c) => c.id === cursoId);
+      if (curso) return { colegio: col, curso };
+    }
+    return null;
+  }
+
+  function confirmarNota() {
+    const limpio = texto.trim();
+    if (!limpio) return;
+    onAgregarNota(limpio, colegioIdSel || null, cursoIdSel || null);
+    setTexto("");
+    setColegioIdSel("");
+    setCursoIdSel("");
+    setFormAbierto(false);
+  }
+
+  const notasFiltradas = notas.filter((n) => {
+    if (filtro === "generales") return !n.cursoId;
+    if (filtro === "curso") return !!n.cursoId;
+    return true;
+  });
+
+  return (
+    <div style={{ minHeight: "100vh", background: COLORS.paper, paddingBottom: 90 }}>
+      <div style={{ background: COLORS.pineDark, padding: "10px 18px 12px 18px", color: COLORS.white, position: "relative" }}>
+        <div style={{ position: "absolute", top: 8, right: 12 }}>
+          <BotonMenuAyuda onAyuda={() => setTourActivo(true)} />
+        </div>
+        <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: COLORS.ochreSoft, letterSpacing: 0.4, marginBottom: 2, paddingRight: 26 }}>CISD</div>
+        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 600 }}>Bitácora</div>
+      </div>
+
+      <div style={{ padding: "14px 16px" }}>
+        <button
+          ref={refNuevaNota}
+          onClick={() => setFormAbierto((v) => !v)}
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%",
+            padding: "10px", marginBottom: 12, borderRadius: 12, border: `1.5px solid ${COLORS.pine}`,
+            background: formAbierto ? COLORS.pine : COLORS.white, color: formAbierto ? COLORS.white : COLORS.pineDark,
+            fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 700, cursor: "pointer",
+          }}
+        >
+          {formAbierto ? "Cancelar" : "+ Nueva nota"}
+        </button>
+
+        {formAbierto && (
+          <div style={{ padding: 12, background: COLORS.paperDim, borderRadius: 12, border: `1px dashed ${COLORS.line}`, marginBottom: 14 }}>
+            <textarea
+              value={texto}
+              onChange={(e) => setTexto(e.target.value)}
+              placeholder="Escribí tu nota…"
+              rows={3}
+              autoFocus
+              style={{ width: "100%", border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 8, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, color: COLORS.ink, resize: "vertical", marginBottom: 8 }}
+            />
+            <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, color: COLORS.inkSoft, marginBottom: 4 }}>
+              ¿La atamos a un colegio/curso? (opcional)
+            </div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+              <select
+                value={colegioIdSel}
+                onChange={(e) => { setColegioIdSel(e.target.value); setCursoIdSel(""); }}
+                style={{ border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: "6px 6px", fontSize: 12.5, fontFamily: "'IBM Plex Sans', sans-serif", color: COLORS.ink }}
+              >
+                <option value="">Sin colegio (nota general)</option>
+                {colegios.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+              </select>
+              {colegioIdSel && (
+                <select
+                  value={cursoIdSel}
+                  onChange={(e) => setCursoIdSel(e.target.value)}
+                  style={{ border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: "6px 6px", fontSize: 12.5, fontFamily: "'IBM Plex Sans', sans-serif", color: COLORS.ink }}
+                >
+                  <option value="">Todo el colegio</option>
+                  {(cursosPorColegio[colegioIdSel] || []).map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                </select>
+              )}
+            </div>
+            <button
+              onClick={confirmarNota}
+              disabled={!texto.trim()}
+              style={{
+                padding: "7px 16px", borderRadius: 999, border: "none", cursor: texto.trim() ? "pointer" : "default",
+                background: COLORS.pine, color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 600,
+                opacity: texto.trim() ? 1 : 0.5,
+              }}
+            >
+              Guardar nota
+            </button>
+          </div>
+        )}
+
+        <div ref={refFiltros} style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+          {[{ id: "todas", label: "Todas" }, { id: "generales", label: "Generales" }, { id: "curso", label: "De un curso" }].map((f) => (
+            <span
+              key={f.id}
+              onClick={() => setFiltro(f.id)}
+              style={{
+                padding: "5px 10px", borderRadius: 999, fontSize: 11.5, fontWeight: 600, cursor: "pointer",
+                fontFamily: "'IBM Plex Sans', sans-serif", background: filtro === f.id ? COLORS.ochre : COLORS.paperDim,
+                color: filtro === f.id ? COLORS.pineDark : COLORS.inkSoft,
+              }}
+            >
+              {f.label}
+            </span>
+          ))}
+        </div>
+
+        {notasFiltradas.length === 0 && (
+          <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, color: COLORS.inkSoft, fontStyle: "italic", textAlign: "center", padding: "20px 10px" }}>
+            No hay notas para mostrar acá todavía.
+          </div>
+        )}
+
+        {notasFiltradas.map((n) => {
+          const ref = n.cursoId ? nombreCurso(n.cursoId) : null;
+          const enEdicion = editandoId === n.id;
+          return (
+            <div key={n.id} style={{ background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: "10px 12px", marginBottom: 8 }}>
+              {enEdicion ? (
+                <>
+                  <textarea
+                    value={textoEdicion}
+                    onChange={(e) => setTextoEdicion(e.target.value)}
+                    rows={3}
+                    autoFocus
+                    style={{ width: "100%", border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: 8, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, color: COLORS.ink, resize: "vertical", marginBottom: 6 }}
+                  />
+                  <div style={{ display: "flex", gap: 12 }}>
+                    <span
+                      onClick={() => { if (textoEdicion.trim()) { onEditarNota(n.id, textoEdicion.trim()); setEditandoId(null); } }}
+                      style={{ cursor: "pointer", color: COLORS.pine, fontSize: 13, fontFamily: "'IBM Plex Sans', sans-serif", fontWeight: 600 }}
+                    >
+                      Guardar
+                    </span>
+                    <span onClick={() => setEditandoId(null)} style={{ cursor: "pointer", color: COLORS.inkSoft, fontSize: 13, fontFamily: "'IBM Plex Sans', sans-serif", fontWeight: 600 }}>
+                      Cancelar
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {ref && (
+                    <div style={{ display: "inline-block", padding: "2px 8px", borderRadius: 999, background: COLORS.ochreSoft, color: COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 10.5, fontWeight: 700, marginBottom: 6 }}>
+                      {ref.colegio.nombre} · {ref.curso.nombre}
+                    </div>
+                  )}
+                  <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, color: COLORS.ink, whiteSpace: "pre-wrap", marginBottom: 6 }}>
+                    {n.texto}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 10.5, color: COLORS.inkSoft }}>
+                      {fechaCorta(n.fecha)}
+                    </span>
+                    <div style={{ display: "flex", gap: 12 }}>
+                      <span
+                        onClick={() => { setEditandoId(n.id); setTextoEdicion(n.texto); }}
+                        style={{ cursor: "pointer", color: COLORS.pine, fontSize: 12.5, fontFamily: "'IBM Plex Sans', sans-serif", fontWeight: 600 }}
+                      >
+                        Editar
+                      </span>
+                      <span
+                        onClick={() => onEliminarNota(n.id)}
+                        style={{ cursor: "pointer", color: COLORS.rose, fontSize: 12.5, fontFamily: "'IBM Plex Sans', sans-serif", fontWeight: 600 }}
+                      >
+                        Eliminar
+                      </span>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {tourActivo && (
+        <TourGuiado pasos={pasos} onCerrar={() => { setTourActivo(false); onMarcarTourVisto(); }} />
+      )}
+
+      <BotonVolverFlotante onVolver={onVolver} />
+    </div>
+  );
+}
+
+function PantallaHorarioDocente({ colegios, cursosPorColegio, diasClasePorCurso, onSetDiasClaseCurso, onVolverApp, tourVistoPorPantalla, onMarcarTourVistoPantalla }) {
+  const [subvista, setSubvista] = useState("colegios"); // "colegios" | "cursos" | "editor" | "semana"
+  const [colSel, setColSel] = useState(null);
+  const [cursoSel, setCursoSel] = useState(null);
+  const [nuevoDia, setNuevoDia] = useState("LU");
+  const [nuevoInicio, setNuevoInicio] = useState("");
+  const [nuevoFin, setNuevoFin] = useState("");
+  const [editandoIndice, setEditandoIndice] = useState(null);
+
+  const tvp = tourVistoPorPantalla || {};
+  const [tourActivoColegios, setTourActivoColegios] = useState(!tvp.horarioColegios);
+  const [tourActivoCursos, setTourActivoCursos] = useState(!tvp.horarioCursos);
+  const [tourActivoEditor, setTourActivoEditor] = useState(!tvp.horarioEditor);
+  const [tourActivoSemana, setTourActivoSemana] = useState(!tvp.horarioSemana);
+  const refVerSemana = useRef(null);
+  const refListaColegios = useRef(null);
+  const refListaCursos = useRef(null);
+  const refBloquesCargados = useRef(null);
+  const refFormBloque = useRef(null);
+  const refReferenciaColores = useRef(null);
+  const refGrillaSemana = useRef(null);
+
+  const pasosColegios = [
+    { titulo: "Ver mi horario armado", texto: "Acá vas a poder ver, en cualquier momento, todo tu horario ya armado en una sola vista semanal.", ref: refVerSemana },
+    { titulo: "Elegí un colegio", texto: "Tocá un colegio para ver sus cursos y cargarles el horario.", ref: refListaColegios },
+  ];
+  const pasosCursos = [
+    { titulo: "Elegí un curso", texto: "Tocá un curso para abrir su editor de horario y cargar los días y bloques de esa materia.", ref: refListaCursos },
+  ];
+  const pasosEditor = [
+    { titulo: "Bloques cargados", texto: "Acá ves los horarios ya cargados para este curso. Podés tocar \"Editar\" para modificar uno, o \"Quitar\" para borrarlo.", ref: refBloquesCargados },
+    { titulo: "Agregar un bloque", texto: "Elegí el día y el horario de inicio/fin, y tocá \"Agregar\". Podés cargar todos los bloques que necesites, incluso varios el mismo día (por ejemplo, dos módulos separados de la misma materia).", ref: refFormBloque },
+  ];
+  const pasosSemana = [
+    { titulo: "Un color por colegio", texto: "Cada colegio tiene su propio color fijo, para identificar de un vistazo a qué colegio pertenece cada clase.", ref: refReferenciaColores },
+    { titulo: "Tamaño real de cada clase", texto: "Cada bloque ocupa un tamaño proporcional a su duración real: un módulo de 80 minutos se ve más grande que uno de 40. Tocá cualquier bloque para ir directo a su editor.", ref: refGrillaSemana },
+  ];
+
+  const DIAS_HORARIO = DIAS_SEMANA.filter((d) => d.code !== "DO" && d.code !== "SA");
+  const NOMBRE_DIA = { LU: "Lunes", MA: "Martes", MI: "Miércoles", JU: "Jueves", VI: "Viernes", SA: "Sábado" };
+
+  function irACurso(colegio, curso) {
+    setColSel(colegio);
+    setCursoSel(curso);
+    setEditandoIndice(null);
+    setNuevoInicio("");
+    setNuevoFin("");
+    setSubvista("editor");
+  }
+
+  function volver() {
+    if (subvista === "editor") setSubvista("cursos");
+    else if (subvista === "cursos") setSubvista("colegios");
+    else if (subvista === "semana") setSubvista("colegios");
+    else onVolverApp();
+  }
+
+  function editarBloque(indice) {
+    const item = (diasClasePorCurso[cursoSel.id] || [])[indice];
+    setNuevoDia(diaConfigCodigo(item));
+    setNuevoInicio(typeof item === "object" ? item.inicio || "" : "");
+    setNuevoFin(typeof item === "object" ? item.fin || "" : "");
+    setEditandoIndice(indice);
+  }
+
+  function cancelarEdicion() {
+    setEditandoIndice(null);
+    setNuevoInicio("");
+    setNuevoFin("");
+  }
+
+  function guardarBloque() {
+    if (!nuevoInicio || !nuevoFin) return;
+    const base = diasClasePorCurso[cursoSel.id] || [];
+    if (editandoIndice !== null) {
+      const nuevo = base.map((item, i) => i === editandoIndice ? { dia: nuevoDia, inicio: nuevoInicio, fin: nuevoFin } : item);
+      onSetDiasClaseCurso(cursoSel.id, nuevo);
+      setEditandoIndice(null);
+    } else {
+      onSetDiasClaseCurso(cursoSel.id, [...base, { dia: nuevoDia, inicio: nuevoInicio, fin: nuevoFin }]);
+    }
+    setNuevoInicio("");
+    setNuevoFin("");
+  }
+
+  function quitarBloque(indice) {
+    const base = diasClasePorCurso[cursoSel.id] || [];
+    onSetDiasClaseCurso(cursoSel.id, base.filter((_, i) => i !== indice));
+    if (editandoIndice === indice) cancelarEdicion();
+  }
+
+  // --- Vista: semana armada (junta todos los cursos) ---
+  const bloquesPorDia = {};
+  DIAS_HORARIO.forEach((d) => { bloquesPorDia[d.code] = []; });
+  colegios.forEach((colegio) => {
+    (cursosPorColegio[colegio.id] || []).forEach((curso) => {
+      (diasClasePorCurso[curso.id] || []).forEach((item) => {
+        const dia = diaConfigCodigo(item);
+        const inicio = typeof item === "object" ? item.inicio : "";
+        const fin = typeof item === "object" ? item.fin : "";
+        if (bloquesPorDia[dia]) bloquesPorDia[dia].push({ colegio, curso, inicio: inicio || "", fin: fin || "" });
+      });
+    });
+  });
+  Object.keys(bloquesPorDia).forEach((dia) => {
+    bloquesPorDia[dia].sort((a, b) => {
+      if (!a.inicio && !b.inicio) return 0;
+      if (!a.inicio) return 1;
+      if (!b.inicio) return -1;
+      return a.inicio.localeCompare(b.inicio);
+    });
+  });
+  const hayAlgunBloque = Object.values(bloquesPorDia).some((arr) => arr.length > 0);
+
+  const encabezado = (titulo, subtitulo, onAyuda) => (
+    <div style={{ background: COLORS.pineDark, padding: "10px 18px 12px 18px", color: COLORS.white, position: "relative" }}>
+      {onAyuda && (
+        <div style={{ position: "absolute", top: 8, right: 12 }}>
+          <BotonMenuAyuda onAyuda={onAyuda} />
+        </div>
+      )}
+      <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: COLORS.ochreSoft, letterSpacing: 0.4, marginBottom: 2, paddingRight: onAyuda ? 26 : 0 }}>
+        {subtitulo || "CISD"}
+      </div>
+      <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 600 }}>{titulo}</div>
+    </div>
+  );
+
+  return (
+    <div style={{ minHeight: "100vh", background: COLORS.paper, paddingBottom: 90 }}>
+      {subvista === "colegios" && (
+        <>
+          {encabezado("Mi horario", null, () => setTourActivoColegios(true))}
+          <div style={{ padding: "14px 16px" }}>
+            <button
+              ref={refVerSemana}
+              onClick={() => setSubvista("semana")}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 6, width: "100%",
+                padding: "10px", marginBottom: 14, borderRadius: 12, border: `1.5px solid ${COLORS.pine}`,
+                background: COLORS.white, color: COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 700, cursor: "pointer",
+              }}
+            >
+              <CalendarDays size={15} strokeWidth={2.4} /> Ver mi horario armado
+            </button>
+
+            <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: COLORS.inkSoft, marginBottom: 8 }}>
+              Tocá un colegio para cargar el horario de sus cursos.
+            </div>
+
+            {colegios.length === 0 && (
+              <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, color: COLORS.inkSoft, fontStyle: "italic", textAlign: "center", padding: "20px 10px" }}>
+                Todavía no cargaste ningún colegio.
+              </div>
+            )}
+
+            <div ref={refListaColegios}>
+              {colegios.map((col) => (
+                <div
+                  key={col.id}
+                  onClick={() => { setColSel(col); setSubvista("cursos"); }}
+                  style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", marginBottom: 8,
+                    background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, cursor: "pointer",
+                  }}
+                >
+                  <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 15, fontWeight: 600, color: COLORS.ink }}>{col.nombre}</span>
+                  <ChevronRight size={16} color={COLORS.inkSoft} strokeWidth={2.2} />
+                </div>
+              ))}
+            </div>
+          </div>
+          {tourActivoColegios && (
+            <TourGuiado pasos={pasosColegios} onCerrar={() => { setTourActivoColegios(false); onMarcarTourVistoPantalla("horarioColegios"); }} />
+          )}
+        </>
+      )}
+
+      {subvista === "cursos" && colSel && (
+        <>
+          {encabezado(colSel.nombre, "Mi horario", () => setTourActivoCursos(true))}
+          <div style={{ padding: "14px 16px" }}>
+            <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: COLORS.inkSoft, marginBottom: 8 }}>
+              Tocá un curso para cargar o revisar su horario.
+            </div>
+            {(cursosPorColegio[colSel.id] || []).length === 0 && (
+              <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, color: COLORS.inkSoft, fontStyle: "italic", textAlign: "center", padding: "20px 10px" }}>
+                Este colegio todavía no tiene cursos cargados.
+              </div>
+            )}
+            <div ref={refListaCursos}>
+              {(cursosPorColegio[colSel.id] || []).map((curso) => {
+                const cantBloques = (diasClasePorCurso[curso.id] || []).length;
+                return (
+                  <div
+                    key={curso.id}
+                    onClick={() => irACurso(colSel, curso)}
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 14px", marginBottom: 8,
+                      background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, cursor: "pointer",
+                    }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 15, fontWeight: 600, color: COLORS.ink }}>
+                        {curso.nombre}{curso.materia ? ` · ${curso.materia}` : ""}
+                      </div>
+                      <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, color: COLORS.inkSoft }}>
+                        {cantBloques === 0 ? "Sin horario cargado" : `${cantBloques} bloque${cantBloques === 1 ? "" : "s"} cargado${cantBloques === 1 ? "" : "s"}`}
+                      </div>
+                    </div>
+                    <ChevronRight size={16} color={COLORS.inkSoft} strokeWidth={2.2} />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          {tourActivoCursos && (
+            <TourGuiado pasos={pasosCursos} onCerrar={() => { setTourActivoCursos(false); onMarcarTourVistoPantalla("horarioCursos"); }} />
+          )}
+        </>
+      )}
+
+      {subvista === "editor" && cursoSel && (
+        <>
+          {encabezado(cursoSel.nombre, `${colSel.nombre} · Mi horario`, () => setTourActivoEditor(true))}
+          <div style={{ padding: "14px 16px" }}>
+            <div ref={refBloquesCargados}>
+              <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 700, color: COLORS.pineDark, marginBottom: 8 }}>
+                Bloques cargados
+              </div>
+              {(diasClasePorCurso[cursoSel.id] || []).length === 0 && (
+                <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: COLORS.inkSoft, fontStyle: "italic", marginBottom: 10 }}>
+                  Todavía no cargaste ningún bloque para este curso.
+                </div>
+              )}
+              {(diasClasePorCurso[cursoSel.id] || []).map((item, i) => {
+                const dia = diaConfigCodigo(item);
+                const inicio = typeof item === "object" ? item.inicio : "";
+                const fin = typeof item === "object" ? item.fin : "";
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "9px 12px", marginBottom: 6,
+                      background: editandoIndice === i ? COLORS.ochreSoft : COLORS.white, border: `1px solid ${editandoIndice === i ? COLORS.ochre : COLORS.line}`, borderRadius: 10,
+                    }}
+                  >
+                    <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: COLORS.ink }}>
+                      <strong>{NOMBRE_DIA[dia] || dia}</strong>{" "}
+                      <span style={{ fontFamily: "'IBM Plex Mono', monospace", color: COLORS.ochre, fontWeight: 700 }}>
+                        {inicio && fin ? `${inicio}–${fin}` : "sin horario"}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", gap: 12, flexShrink: 0 }}>
+                      <span onClick={() => editarBloque(i)} style={{ cursor: "pointer", color: COLORS.pine, fontSize: 13, fontFamily: "'IBM Plex Sans', sans-serif", fontWeight: 600 }}>
+                        Editar
+                      </span>
+                      <span onClick={() => quitarBloque(i)} style={{ cursor: "pointer", color: COLORS.rose, fontSize: 13, fontFamily: "'IBM Plex Sans', sans-serif", fontWeight: 600 }}>
+                        Quitar
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div ref={refFormBloque} style={{ marginTop: 14, padding: "12px", background: editandoIndice !== null ? COLORS.ochreSoft : COLORS.paperDim, borderRadius: 12, border: `1px dashed ${editandoIndice !== null ? COLORS.ochre : COLORS.line}` }}>
+              <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 700, color: COLORS.pineDark, marginBottom: 8 }}>
+                {editandoIndice !== null ? "Editar bloque" : "+ Agregar bloque"}
+              </div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                <select
+                  value={nuevoDia}
+                  onChange={(e) => setNuevoDia(e.target.value)}
+                  style={{ border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: "6px 6px", fontSize: 12.5, fontFamily: "'IBM Plex Sans', sans-serif", color: COLORS.ink }}
+                >
+                  {DIAS_HORARIO.map((d) => <option key={d.code} value={d.code}>{NOMBRE_DIA[d.code]}</option>)}
+                </select>
+                <input
+                  type="time" value={nuevoInicio} onChange={(e) => setNuevoInicio(e.target.value)}
+                  style={{ border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: "6px 6px", fontSize: 12.5, fontFamily: "'IBM Plex Sans', sans-serif", color: COLORS.ink }}
+                />
+                <span style={{ fontSize: 12, color: COLORS.inkSoft }}>a</span>
+                <input
+                  type="time" value={nuevoFin} onChange={(e) => setNuevoFin(e.target.value)}
+                  style={{ border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: "6px 6px", fontSize: 12.5, fontFamily: "'IBM Plex Sans', sans-serif", color: COLORS.ink }}
+                />
+                <button
+                  onClick={guardarBloque}
+                  disabled={!nuevoInicio || !nuevoFin}
+                  style={{
+                    padding: "6px 14px", borderRadius: 999, border: "none", cursor: nuevoInicio && nuevoFin ? "pointer" : "default",
+                    background: COLORS.pine, color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 600,
+                    opacity: nuevoInicio && nuevoFin ? 1 : 0.5,
+                  }}
+                >
+                  {editandoIndice !== null ? "Guardar cambios" : "Agregar"}
+                </button>
+                {editandoIndice !== null && (
+                  <span onClick={cancelarEdicion} style={{ cursor: "pointer", color: COLORS.inkSoft, fontSize: 12.5, fontFamily: "'IBM Plex Sans', sans-serif", fontWeight: 600 }}>
+                    Cancelar
+                  </span>
+                )}
+              </div>
+              <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, color: COLORS.inkSoft, marginTop: 8 }}>
+                Podés agregar varios bloques el mismo día para este curso (por ejemplo, dos módulos separados).
+              </div>
+            </div>
+          </div>
+          {tourActivoEditor && (
+            <TourGuiado pasos={pasosEditor} onCerrar={() => { setTourActivoEditor(false); onMarcarTourVistoPantalla("horarioEditor"); }} />
+          )}
+        </>
+      )}
+
+      {subvista === "semana" && (
+        <>
+          {encabezado("Mi horario armado", null, () => setTourActivoSemana(true))}
+          <div style={{ padding: "14px 16px" }}>
+            {!hayAlgunBloque ? (
+              <CuadroGuia texto={'Todavía no cargaste ningún bloque. Entrá a un colegio → un curso, y agregá los días y horarios de esa materia.'} />
+            ) : (
+              <div ref={refGrillaSemana}>
+                <GrillaHorarioSemanal colegios={colegios} bloquesPorDia={bloquesPorDia} diasHorario={DIAS_HORARIO} nombreDia={NOMBRE_DIA} onTocarBloque={irACurso} refReferenciaColores={refReferenciaColores} />
+              </div>
+            )}
+          </div>
+          {tourActivoSemana && hayAlgunBloque && (
+            <TourGuiado pasos={pasosSemana} onCerrar={() => { setTourActivoSemana(false); onMarcarTourVistoPantalla("horarioSemana"); }} />
+          )}
+        </>
+      )}
+
+      <BotonVolverFlotante onVolver={volver} />
+    </div>
+  );
+}
+
 function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno, onEditarAlumno, onAbrirFicha, onVolver, criterios, ordenPorCurso, onReordenarCriterios, onAgregarCriterio, onUsarCriterio, onUsarCriterioEnTodos, onQuitarCriterio, onEditarCriterio, onEliminarCriterioDefinitivo, periodo, onCambiarPeriodo, instanciasPorCriterio, onGuardarMasivo, onAgregarInstancia, notaAprobacion, onCambiarNotaAprobacion, onCambiarNotaOficial, onCambiarNotaRecuperatorio, nombresColumnasPorColegio, onRenombrarColumnaNota, diasCurso, diasClaseConfig, onAlternarCeldaAsistencia, onSetMotivoNoTrabajado, onSetDiasClase, tourVisto, onMarcarTourVisto, tourVistoPorPantalla, onMarcarTourVistoPantalla, promedioAuto, onTogglePromedioAuto }) {
   const [busqueda, setBusqueda] = useState("");
   const [masivaAbierta, setMasivaAbierta] = useState(false);
@@ -4829,6 +5520,11 @@ export default function CISDNavegacion() {
   const [pasoBienvenida, setPasoBienvenida] = useState("intro"); // "intro" | "nombre"
   const [mostrarCambiarNombre, setMostrarCambiarNombre] = useState(false);
   const [cargadoPerfil, setCargadoPerfil] = useState(false);
+  const [mostrarHorario, setMostrarHorario] = useState(false);
+  const [mostrarNotas, setMostrarNotas] = useState(false);
+  // Notas libres del docente: reuniones, ideas, cualquier cosa. Cada una
+  // puede quedar suelta (colegioId/cursoId null) o atada a un curso puntual.
+  const [notas, setNotas] = useState([]);
   const esEscritorio = useEsEscritorio();
 
   // Habilita "Cambiar nombre" desde el menú "⋮" de cualquier pantalla.
@@ -4887,6 +5583,7 @@ export default function CISDNavegacion() {
           if (datos.promedioAutoPorCurso) setPromedioAutoPorCurso(datos.promedioAutoPorCurso);
           if (datos.nombresColumnasPorColegio) setNombresColumnasPorColegio(datos.nombresColumnasPorColegio);
           if (datos.tourVistoPorPantalla) setTourVistoPorPantalla(datos.tourVistoPorPantalla);
+          if (datos.notas) setNotas(datos.notas);
         }
       } catch (err) {
         // Primera vez: no hay nada guardado todavía.
@@ -4900,10 +5597,10 @@ export default function CISDNavegacion() {
 
   useEffect(() => {
     if (!cargado) return;
-    window.storage.set("cisd-instituciones", JSON.stringify({ colegios, cursos, alumnosPorCurso, criterios, instanciasPorCurso, periodoPorCurso, criteriosUsadosP1PorCurso, p2ReactivadoPorCurso, ordenPorCurso, asistenciaPorCurso, diasClasePorCurso, notaAprobacion, nombresColumnasPorColegio, tourVistoPorPantalla, promedioAutoPorCurso })).catch((err) => {
+    window.storage.set("cisd-instituciones", JSON.stringify({ colegios, cursos, alumnosPorCurso, criterios, instanciasPorCurso, periodoPorCurso, criteriosUsadosP1PorCurso, p2ReactivadoPorCurso, ordenPorCurso, asistenciaPorCurso, diasClasePorCurso, notaAprobacion, nombresColumnasPorColegio, tourVistoPorPantalla, promedioAutoPorCurso, notas })).catch((err) => {
       console.error("No se pudo guardar automáticamente", err);
     });
-  }, [colegios, cursos, alumnosPorCurso, criterios, instanciasPorCurso, periodoPorCurso, criteriosUsadosP1PorCurso, p2ReactivadoPorCurso, ordenPorCurso, asistenciaPorCurso, diasClasePorCurso, notaAprobacion, nombresColumnasPorColegio, tourVistoPorPantalla, promedioAutoPorCurso, cargado]);
+  }, [colegios, cursos, alumnosPorCurso, criterios, instanciasPorCurso, periodoPorCurso, criteriosUsadosP1PorCurso, p2ReactivadoPorCurso, ordenPorCurso, asistenciaPorCurso, diasClasePorCurso, notaAprobacion, nombresColumnasPorColegio, tourVistoPorPantalla, promedioAutoPorCurso, notas, cargado]);
 
   // Mientras un curso está en 1° cuatrimestre, registra qué criterios
   // están activos en él. Es un registro acumulativo (nunca se borra algo
@@ -5156,6 +5853,17 @@ export default function CISDNavegacion() {
     setDiasClasePorCurso((prev) => ({ ...prev, [curId]: dias }));
   }
 
+  function agregarNota(texto, colegioId, cursoId) {
+    const nueva = { id: fechaISO() + "-" + Math.random().toString(36).slice(2, 8), texto, fecha: fechaISO(), colegioId: colegioId || null, cursoId: cursoId || null };
+    setNotas((prev) => [nueva, ...prev]);
+  }
+  function editarNota(id, texto) {
+    setNotas((prev) => prev.map((n) => n.id === id ? { ...n, texto } : n));
+  }
+  function eliminarNota(id) {
+    setNotas((prev) => prev.filter((n) => n.id !== id));
+  }
+
   // Prende/apaga el cálculo automático de promedios de la planilla oficial
   // para un curso puntual (no afecta a los demás cursos).
   function alternarPromedioAuto(curId) {
@@ -5382,6 +6090,42 @@ export default function CISDNavegacion() {
   else if (colegioActual && cursoActual) pantalla = "aula";
   else if (colegioActual) pantalla = "cursos";
 
+  if (mostrarHorario) {
+    return (
+      <div style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
+        <style>{`@import url('${FONT_URL}'); * { box-sizing: border-box; }`}</style>
+        <PantallaHorarioDocente
+          colegios={colegios}
+          cursosPorColegio={cursosPorColegio}
+          diasClasePorCurso={diasClasePorCurso}
+          onSetDiasClaseCurso={setDiasClaseCurso}
+          onVolverApp={() => setMostrarHorario(false)}
+          tourVistoPorPantalla={tourVistoPorPantalla}
+          onMarcarTourVistoPantalla={marcarTourVisto}
+        />
+      </div>
+    );
+  }
+
+  if (mostrarNotas) {
+    return (
+      <div style={{ fontFamily: "'IBM Plex Sans', sans-serif" }}>
+        <style>{`@import url('${FONT_URL}'); * { box-sizing: border-box; }`}</style>
+        <PantallaNotas
+          colegios={colegios}
+          cursosPorColegio={cursosPorColegio}
+          notas={notas}
+          onAgregarNota={agregarNota}
+          onEditarNota={editarNota}
+          onEliminarNota={eliminarNota}
+          onVolver={() => setMostrarNotas(false)}
+          tourVisto={!!tourVistoPorPantalla.bitacora}
+          onMarcarTourVisto={() => marcarTourVisto("bitacora")}
+        />
+      </div>
+    );
+  }
+
   return (
     <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", background: COLORS.paper, minHeight: "100vh", display: "flex", justifyContent: esEscritorio ? "flex-start" : "center" }}>
       <style>{`@import url('${FONT_URL}');
@@ -5406,6 +6150,8 @@ export default function CISDNavegacion() {
           onIrAInicio={() => { setColegioId(null); setCursoId(null); setFichaAlumnoId(null); }}
           onIrAColegio={(col) => { setColegioId(col.id); setCursoId(null); setFichaAlumnoId(null); }}
           onIrACurso={(col, curso) => { setColegioId(col.id); setCursoId(curso.id); setFichaAlumnoId(null); }}
+          onIrAHorario={() => setMostrarHorario(true)}
+          onIrANotas={() => setMostrarNotas(true)}
         />
       )}
 
@@ -5419,7 +6165,23 @@ export default function CISDNavegacion() {
               <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 15, fontWeight: 700, color: COLORS.ochreSoft, letterSpacing: 0.4, marginBottom: 2, paddingRight: 26 }}>
                 CISD
               </div>
-              <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 600 }}>Mis colegios</div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 600 }}>Mis colegios</div>
+                <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                  <span
+                    onClick={() => setMostrarHorario(true)}
+                    style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, fontWeight: 700, color: COLORS.pineDark, background: COLORS.ochre, padding: "7px 10px", borderRadius: 999 }}
+                  >
+                    <CalendarDays size={13} strokeWidth={2.4} /> Horario
+                  </span>
+                  <span
+                    onClick={() => setMostrarNotas(true)}
+                    style={{ display: "flex", alignItems: "center", gap: 5, cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, fontWeight: 700, color: COLORS.pineDark, background: COLORS.ochre, padding: "7px 10px", borderRadius: 999 }}
+                  >
+                    <StickyNote size={13} strokeWidth={2.4} /> Bitácora
+                  </span>
+                </div>
+              </div>
             </div>
             <PantallaColegios
               colegios={colegios}
