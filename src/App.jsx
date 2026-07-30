@@ -484,11 +484,16 @@ function Toast({ text, show }) {
 // componente principal (CISDNavegacion) apenas se monta.
 let abrirCambiarNombreRef = null;
 
+// Ref global (provisorio, mientras dure la prueba con los colegas) para
+// abrir el popup de "Enviar sugerencia" desde el menú "⋮" de la
+// pantalla de Mis colegios.
+let abrirSugerenciaRef = null;
+
 // ================================================================
 // MENÚ "⋮" DE PANTALLA — "Ayuda de esta pantalla" (vuelve a mostrar el
 // recorrido guiado) y "Cambiar nombre" (edita cómo lo saluda la app).
 // ================================================================
-function BotonMenuAyuda({ onAyuda }) {
+function BotonMenuAyuda({ onAyuda, mostrarSugerencia }) {
   const [abierto, setAbierto] = useState(false);
   return (
     <div style={{ position: "relative" }}>
@@ -515,6 +520,14 @@ function BotonMenuAyuda({ onAyuda }) {
             >
               <Smile size={15} strokeWidth={2.2} /> Cambiar nombre
             </div>
+            {mostrarSugerencia && (
+              <div
+                onClick={() => { setAbierto(false); if (abrirSugerenciaRef) abrirSugerenciaRef(); }}
+                style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", borderRadius: 10, cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, color: COLORS.pineDark, fontWeight: 500 }}
+              >
+                <StickyNote size={15} strokeWidth={2.2} /> Enviar sugerencia
+              </div>
+            )}
           </div>
         </>
       )}
@@ -5423,6 +5436,76 @@ function PopupElegirNombre({ valorInicial = "", titulo, subtitulo, textoBoton, o
   );
 }
 
+// Popup provisorio (mientras dure la prueba con los colegas) para que
+// cualquier docente le mande a Carloncho una sugerencia o comentario
+// sobre la app, sin salir de donde está.
+function PopupSugerencia({ onEnviar, onCerrar }) {
+  const [texto, setTexto] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [enviado, setEnviado] = useState(false);
+
+  async function confirmar() {
+    const limpio = texto.trim();
+    if (!limpio) return;
+    setEnviando(true);
+    const ok = await onEnviar(limpio);
+    setEnviando(false);
+    if (ok) setEnviado(true);
+  }
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(21,53,49,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 210, padding: 20 }}>
+      <div style={{ background: COLORS.white, borderRadius: 16, padding: 22, width: "100%", maxWidth: 360, boxShadow: "0 16px 40px rgba(0,0,0,0.35)" }}>
+        {enviado ? (
+          <>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 600, color: COLORS.pineDark, marginBottom: 6 }}>
+              ¡Gracias!
+            </div>
+            <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, color: COLORS.inkSoft, marginBottom: 16, lineHeight: 1.45 }}>
+              Tu sugerencia ya está en camino.
+            </div>
+            <button
+              onClick={onCerrar}
+              style={{ width: "100%", padding: "10px", borderRadius: 10, border: "none", background: COLORS.pine, color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+            >
+              Cerrar
+            </button>
+          </>
+        ) : (
+          <>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 600, color: COLORS.pineDark, marginBottom: 6 }}>
+              Enviar sugerencia
+            </div>
+            <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: COLORS.inkSoft, marginBottom: 14, lineHeight: 1.45 }}>
+              La app está a prueba: contame lo que se te ocurra, un error que veas, o una idea para mejorarla.
+            </div>
+            <textarea
+              value={texto} onChange={(e) => setTexto(e.target.value)} autoFocus rows={4}
+              placeholder="Escribí acá tu sugerencia…"
+              style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: "10px 12px", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, marginBottom: 14, resize: "vertical" }}
+            />
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={onCerrar}
+                style={{ flex: 1, padding: "10px", borderRadius: 10, border: `1.5px solid ${COLORS.line}`, background: "transparent", color: COLORS.inkSoft, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmar}
+                disabled={!texto.trim() || enviando}
+                style={{ flex: 1, padding: "10px", borderRadius: 10, border: "none", background: texto.trim() ? COLORS.pine : COLORS.line, color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, fontWeight: 600, cursor: texto.trim() ? "pointer" : "default" }}
+              >
+                {enviando ? "Enviando…" : "Enviar"}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ================================================================
 // SALUDO POR FRANJA HORARIA — aparece como máximo una vez por franja
 // (mañana / tarde / noche) y por día. Elige al azar una variante de
@@ -5526,12 +5609,19 @@ function CISDNavegacion() {
   // Notas libres del docente: reuniones, ideas, cualquier cosa. Cada una
   // puede quedar suelta (colegioId/cursoId null) o atada a un curso puntual.
   const [notas, setNotas] = useState([]);
+  const [mostrarSugerencia, setMostrarSugerencia] = useState(false);
   const esEscritorio = useEsEscritorio();
 
   // Habilita "Cambiar nombre" desde el menú "⋮" de cualquier pantalla.
   useEffect(() => {
     abrirCambiarNombreRef = () => setMostrarCambiarNombre(true);
     return () => { abrirCambiarNombreRef = null; };
+  }, []);
+
+  // Habilita "Enviar sugerencia" (provisorio, mientras dure la prueba).
+  useEffect(() => {
+    abrirSugerenciaRef = () => setMostrarSugerencia(true);
+    return () => { abrirSugerenciaRef = null; };
   }, []);
 
   useEffect(() => {
@@ -5865,6 +5955,21 @@ function CISDNavegacion() {
     setNotas((prev) => prev.filter((n) => n.id !== id));
   }
 
+  // Guarda la sugerencia directo en Supabase (tabla "sugerencias"), sin
+  // pasar por window.storage: es un canal aparte, provisorio mientras
+  // dure la prueba con los colegas.
+  async function enviarSugerencia(texto) {
+    const { data } = await supabase.auth.getSession();
+    const sesionActual = data && data.session;
+    if (!sesionActual) return false;
+    const { error } = await supabase.from("sugerencias").insert({
+      user_id: sesionActual.user.id,
+      correo: sesionActual.user.email,
+      texto,
+    });
+    return !error;
+  }
+
   // Prende/apaga el cálculo automático de promedios de la planilla oficial
   // para un curso puntual (no afecta a los demás cursos).
   function alternarPromedioAuto(curId) {
@@ -6161,7 +6266,7 @@ function CISDNavegacion() {
           <>
             <div style={{ background: COLORS.pineDark, padding: "8px 18px 8px 18px", color: COLORS.white, position: "relative" }}>
               <div style={{ position: "absolute", top: 5, right: 10 }}>
-                <BotonMenuAyuda onAyuda={() => refAyudaColegios.current && refAyudaColegios.current()} />
+                <BotonMenuAyuda onAyuda={() => refAyudaColegios.current && refAyudaColegios.current()} mostrarSugerencia />
               </div>
               <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 15, fontWeight: 700, color: COLORS.ochreSoft, letterSpacing: 0.4, marginBottom: 2, paddingRight: 26 }}>
                 CISD
@@ -6315,6 +6420,13 @@ function CISDNavegacion() {
           textoBoton="Guardar"
           onConfirmar={(nombre) => { setNombreDocente(nombre); setMostrarCambiarNombre(false); }}
           onCancelar={() => setMostrarCambiarNombre(false)}
+        />
+      )}
+
+      {mostrarSugerencia && (
+        <PopupSugerencia
+          onEnviar={enviarSugerencia}
+          onCerrar={() => setMostrarSugerencia(false)}
         />
       )}
 
