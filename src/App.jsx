@@ -484,16 +484,11 @@ function Toast({ text, show }) {
 // componente principal (CISDNavegacion) apenas se monta.
 let abrirCambiarNombreRef = null;
 
-// Ref global (provisorio, mientras dure la prueba con los colegas) para
-// abrir el popup de "Enviar sugerencia" desde el menú "⋮" de la
-// pantalla de Mis colegios.
-let abrirSugerenciaRef = null;
-
 // ================================================================
 // MENÚ "⋮" DE PANTALLA — "Ayuda de esta pantalla" (vuelve a mostrar el
 // recorrido guiado) y "Cambiar nombre" (edita cómo lo saluda la app).
 // ================================================================
-function BotonMenuAyuda({ onAyuda, mostrarSugerencia }) {
+function BotonMenuAyuda({ onAyuda }) {
   const [abierto, setAbierto] = useState(false);
   return (
     <div style={{ position: "relative" }}>
@@ -520,14 +515,6 @@ function BotonMenuAyuda({ onAyuda, mostrarSugerencia }) {
             >
               <Smile size={15} strokeWidth={2.2} /> Cambiar nombre
             </div>
-            {mostrarSugerencia && (
-              <div
-                onClick={() => { setAbierto(false); if (abrirSugerenciaRef) abrirSugerenciaRef(); }}
-                style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 10px", borderRadius: 10, cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, color: COLORS.pineDark, fontWeight: 500 }}
-              >
-                <StickyNote size={15} strokeWidth={2.2} /> Enviar sugerencia
-              </div>
-            )}
           </div>
         </>
       )}
@@ -1106,7 +1093,7 @@ function FilaCurso({ Icono, titulo, materia, subtitulo, onAbrir, onRenombrar, on
 }
 
 
-function PantallaColegios({ colegios, cursosPorColegio, onAbrir, onAgregar, onRenombrar, onEliminar, tourVisto, onMarcarTourVisto, onAyudaRef }) {
+function PantallaColegios({ colegios, cursosPorColegio, onAbrir, onAgregar, onRenombrar, onEliminar, tourVisto, onMarcarTourVisto, onAyudaRef, onAbrirSugerencia }) {
   const [agregando, setAgregando] = useState(colegios.length === 0);
   const [tourActivo, setTourActivo] = useState(!tourVisto);
   const refAgregar = useRef(null);
@@ -1160,6 +1147,17 @@ function PantallaColegios({ colegios, cursosPorColegio, onAbrir, onAgregar, onRe
         >
           <Plus size={14} strokeWidth={2.6} /> Agregar colegio
         </button>
+      )}
+
+      {onAbrirSugerencia && (
+        <div style={{ textAlign: "center", marginTop: 22 }}>
+          <span
+            onClick={onAbrirSugerencia}
+            style={{ cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: COLORS.inkSoft, textDecoration: "underline", textDecorationColor: COLORS.line }}
+          >
+            💬 La app está a prueba — dejá tu sugerencia
+          </span>
+        </div>
       )}
 
       {tourActivo && (
@@ -5618,12 +5616,6 @@ function CISDNavegacion() {
     return () => { abrirCambiarNombreRef = null; };
   }, []);
 
-  // Habilita "Enviar sugerencia" (provisorio, mientras dure la prueba).
-  useEffect(() => {
-    abrirSugerenciaRef = () => setMostrarSugerencia(true);
-    return () => { abrirSugerenciaRef = null; };
-  }, []);
-
   useEffect(() => {
     let activo = true;
     async function cargarPerfil() {
@@ -6266,7 +6258,7 @@ function CISDNavegacion() {
           <>
             <div style={{ background: COLORS.pineDark, padding: "8px 18px 8px 18px", color: COLORS.white, position: "relative" }}>
               <div style={{ position: "absolute", top: 5, right: 10 }}>
-                <BotonMenuAyuda onAyuda={() => refAyudaColegios.current && refAyudaColegios.current()} mostrarSugerencia />
+                <BotonMenuAyuda onAyuda={() => refAyudaColegios.current && refAyudaColegios.current()} />
               </div>
               <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 15, fontWeight: 700, color: COLORS.ochreSoft, letterSpacing: 0.4, marginBottom: 2, paddingRight: 26 }}>
                 CISD
@@ -6299,6 +6291,7 @@ function CISDNavegacion() {
               tourVisto={!!tourVistoPorPantalla.colegios}
               onMarcarTourVisto={() => marcarTourVisto("colegios")}
               onAyudaRef={refAyudaColegios}
+              onAbrirSugerencia={() => setMostrarSugerencia(true)}
             />
           </>
         )}
