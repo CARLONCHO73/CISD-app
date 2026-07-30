@@ -6327,6 +6327,184 @@ function CISDNavegacion() {
 // docente y le manda un link mágico para iniciar sesión (sin contraseña
 // que recordar). Al tocar el link del mail, Supabase detecta sola la
 // sesión y AuthGate deja pasar a la app.
+// El PIN nunca se guarda "tal cual" en el celular: se guarda un hash
+// (una huella digital irreversible) usando la Web Crypto del propio
+// navegador, sin depender de ninguna librería externa.
+async function hashPin(pin) {
+  const datos = new TextEncoder().encode(pin);
+  const buffer = await crypto.subtle.digest("SHA-256", datos);
+  return Array.from(new Uint8Array(buffer)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function CasillerosPin({ valor }) {
+  return (
+    <div style={{ display: "flex", gap: 12, justifyContent: "center", marginBottom: 18 }}>
+      {[0, 1, 2, 3].map((i) => (
+        <div
+          key={i}
+          style={{
+            width: 46, height: 54, borderRadius: 12, border: `1.5px solid ${COLORS.line}`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontFamily: "'IBM Plex Mono', monospace", fontSize: 22, fontWeight: 700, color: COLORS.pineDark,
+            background: COLORS.white,
+          }}
+        >
+          {valor[i] ? "•" : ""}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Se muestra la primera vez que este dispositivo tiene sesión iniciada
+// (o después de "¿Olvidaste tu PIN?"). Pide el PIN dos veces para
+// confirmarlo, y lo guarda (hasheado) solo en este dispositivo.
+function PantallaCrearPin({ onListo }) {
+  const [paso, setPaso] = useState(1);
+  const [pin1, setPin1] = useState("");
+  const [pin2, setPin2] = useState("");
+  const [error, setError] = useState("");
+  const inputRef = useRef(null);
+
+  useEffect(() => { inputRef.current && inputRef.current.focus(); }, [paso]);
+
+  function manejarCambio(valor) {
+    const limpio = valor.replace(/\D/g, "").slice(0, 4);
+    setError("");
+    if (paso === 1) {
+      setPin1(limpio);
+      if (limpio.length === 4) setPaso(2);
+    } else {
+      setPin2(limpio);
+      if (limpio.length === 4) confirmar(limpio);
+    }
+  }
+
+  async function confirmar(segundo) {
+    if (segundo !== pin1) {
+      setError("Los códigos no coinciden. Empecemos de nuevo.");
+      setPaso(1);
+      setPin1("");
+      setPin2("");
+      return;
+    }
+    const hash = await hashPin(pin1);
+    localStorage.setItem("cisd-pin-hash", hash);
+    localStorage.removeItem("cisd-pin-recuperando");
+    onListo();
+  }
+
+  const valorActual = paso === 1 ? pin1 : pin2;
+
+  return (
+    <div style={{ minHeight: "100vh", background: COLORS.paper, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <style>{`@import url('${FONT_URL}'); * { box-sizing: border-box; }`}</style>
+      <div style={{ width: "100%", maxWidth: 320, textAlign: "center" }}>
+        <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 700, color: COLORS.ochre, letterSpacing: 0.5, marginBottom: 6 }}>CISD</div>
+        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 24, fontWeight: 600, color: COLORS.pineDark, marginBottom: 6 }}>
+          {paso === 1 ? "Creá tu PIN" : "Repetilo para confirmar"}
+        </div>
+        <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, color: COLORS.inkSoft, marginBottom: 20, lineHeight: 1.5 }}>
+          {paso === 1 ? "Elegí 4 números. Los vas a usar para entrar rápido en este dispositivo." : "Escribilo una vez más, para estar seguros."}
+        </div>
+        <div style={{ position: "relative" }}>
+          <CasillerosPin valor={valorActual} />
+          <input
+            ref={inputRef}
+            type="tel"
+            inputMode="numeric"
+            value={valorActual}
+            onChange={(e) => manejarCambio(e.target.value)}
+            style={{ position: "absolute", inset: 0, opacity: 0, textAlign: "center", fontSize: 24 }}
+          />
+        </div>
+        {error && <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, color: COLORS.rose }}>{error}</div>}
+      </div>
+    </div>
+  );
+}
+
+// Se muestra cada vez que se abre la app en un dispositivo que ya tiene
+// un PIN creado. Si se olvida, "¿Olvidaste tu PIN?" manda un nuevo link
+// al correo (por seguridad) y, al volver, deja crear un PIN nuevo.
+function PantallaPedirPin({ correo, onDesbloqueado }) {
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState("");
+  const [recuperando, setRecuperando] = useState(false);
+  const [correoEnviado, setCorreoEnviado] = useState(false);
+  const inputRef = useRef(null);
+
+  useEffect(() => { inputRef.current && inputRef.current.focus(); }, []);
+
+  async function verificar(valor) {
+    const hashGuardado = localStorage.getItem("cisd-pin-hash");
+    const hash = await hashPin(valor);
+    if (hash === hashGuardado) {
+      onDesbloqueado();
+    } else {
+      setError("PIN incorrecto. Probá de nuevo.");
+      setPin("");
+    }
+  }
+
+  function manejarCambio(valor) {
+    const limpio = valor.replace(/\D/g, "").slice(0, 4);
+    setPin(limpio);
+    setError("");
+    if (limpio.length === 4) verificar(limpio);
+  }
+
+  async function olvidoPin() {
+    localStorage.setItem("cisd-pin-recuperando", "1");
+    setRecuperando(true);
+    await supabase.auth.signInWithOtp({ email: correo, options: { emailRedirectTo: window.location.origin } });
+    setCorreoEnviado(true);
+  }
+
+  if (recuperando) {
+    return (
+      <div style={{ minHeight: "100vh", background: COLORS.paper, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+        <style>{`@import url('${FONT_URL}'); * { box-sizing: border-box; }`}</style>
+        <div style={{ width: "100%", maxWidth: 320, textAlign: "center" }}>
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, fontWeight: 600, color: COLORS.pineDark, marginBottom: 10 }}>
+            {correoEnviado ? "Revisá tu correo" : "Enviando…"}
+          </div>
+          {correoEnviado && (
+            <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, color: COLORS.inkSoft, lineHeight: 1.5 }}>
+              Te mandamos un link a <strong>{correo}</strong>. Abrilo desde este mismo dispositivo para crear un PIN nuevo.
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ minHeight: "100vh", background: COLORS.paper, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+      <style>{`@import url('${FONT_URL}'); * { box-sizing: border-box; }`}</style>
+      <div style={{ width: "100%", maxWidth: 320, textAlign: "center" }}>
+        <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 700, color: COLORS.ochre, letterSpacing: 0.5, marginBottom: 6 }}>CISD</div>
+        <div style={{ fontFamily: "'Fraunces', serif", fontSize: 24, fontWeight: 600, color: COLORS.pineDark, marginBottom: 20 }}>Ingresá tu PIN</div>
+        <div style={{ position: "relative" }}>
+          <CasillerosPin valor={pin} />
+          <input
+            ref={inputRef}
+            type="tel"
+            inputMode="numeric"
+            value={pin}
+            onChange={(e) => manejarCambio(e.target.value)}
+            style={{ position: "absolute", inset: 0, opacity: 0, textAlign: "center", fontSize: 24 }}
+          />
+        </div>
+        {error && <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, color: COLORS.rose, marginBottom: 10 }}>{error}</div>}
+        <span onClick={olvidoPin} style={{ cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: COLORS.pine, fontWeight: 600 }}>
+          ¿Olvidaste tu PIN?
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function PantallaLogin() {
   const [correo, setCorreo] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -6407,6 +6585,7 @@ function PantallaLogin() {
 function AuthGate() {
   const [cargando, setCargando] = useState(true);
   const [sesion, setSesion] = useState(null);
+  const [estadoPin, setEstadoPin] = useState(null); // "crear" | "pedir" | "desbloqueado"
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -6419,6 +6598,16 @@ function AuthGate() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (!sesion) {
+      setEstadoPin(null);
+      return;
+    }
+    const recuperando = localStorage.getItem("cisd-pin-recuperando") === "1";
+    const hashGuardado = localStorage.getItem("cisd-pin-hash");
+    setEstadoPin(recuperando || !hashGuardado ? "crear" : "pedir");
+  }, [sesion]);
+
   if (cargando) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: COLORS.paper }}>
@@ -6429,7 +6618,16 @@ function AuthGate() {
 
   if (!sesion) return <PantallaLogin />;
 
-  return <CISDNavegacion />;
+  if (estadoPin === "crear") {
+    return <PantallaCrearPin onListo={() => setEstadoPin("desbloqueado")} />;
+  }
+  if (estadoPin === "pedir") {
+    return <PantallaPedirPin correo={sesion.user.email} onDesbloqueado={() => setEstadoPin("desbloqueado")} />;
+  }
+  if (estadoPin === "desbloqueado") {
+    return <CISDNavegacion />;
+  }
+  return null;
 }
 
 export default function App() {
