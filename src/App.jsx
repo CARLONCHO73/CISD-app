@@ -1508,7 +1508,7 @@ function EncabezadoColumnaEditable({ columna, refAdicional, onAbrirRenombrar }) 
       onTouchStart={empezar} onTouchEnd={cancelar} onMouseDown={empezar} onMouseUp={cancelar} onMouseLeave={cancelar}
       style={{
         background: ESTILO_TIPO_NOTA[columna.tipo].header, color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif",
-        fontSize: 9.5, fontWeight: 600, textAlign: "center", padding: "6px 1px", lineHeight: 1.15,
+        fontSize: 9.5, fontWeight: 600, textAlign: "center", padding: "6px 1px", lineHeight: 1.15, height: 29, boxSizing: "border-box",
         display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", userSelect: "none",
       }}
     >
@@ -3098,6 +3098,7 @@ function CeldaNotaOficial({ valor, tipo, notaAprobacion, onIntentarCambiar, calc
         fontWeight: calculado && !editando ? 500 : 700, fontStyle: calculado && !editando ? "italic" : "normal",
         color: calculado && !editando ? COLORS.inkSoft : color,
         padding: "7px 2px", minWidth: 0, cursor: soloLectura ? "default" : "text",
+        contentVisibility: "auto", containIntrinsicSize: "auto 31px",
       }}
     />
   );
@@ -3948,28 +3949,24 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
         </div>
       </div>
 
-      <div ref={refGrilla} style={{ flex: 1, overflow: "auto" }}>
-        <div style={{ display: "grid", gridTemplateColumns: `${anchoNombre}px repeat(7, ${anchoColumna}px)`, width: "fit-content" }}>
-          <div style={{ position: "sticky", left: 0, zIndex: 3, background: COLORS.pineDark, color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, fontWeight: 700, padding: "6px 8px", display: "flex", alignItems: "center" }}>
-            Alumno
-          </div>
-          {columnas.map((c, idx) => (
-            <EncabezadoColumnaEditable
-              key={c.key + "-h"}
-              columna={c}
-              refAdicional={c.tipo === "nota" ? refNota : (idx === 0 ? refPrimeraColumna : null)}
-              onAbrirRenombrar={(col) => setRenombrando({ key: col.key, label: col.label })}
-            />
-          ))}
-
-          {alumnos.map((al, i) => {
-            const { valores, calculadas } = notasConPromedios(al.notasOficiales, promedioAuto);
-            return (
-            <React.Fragment key={al.id}>
+      <div ref={refGrilla} style={{ flex: 1, overflowY: "auto", overflowX: "hidden" }}>
+        <div style={{ display: "flex", alignItems: "flex-start" }}>
+          {/* Panel fijo de nombres: no usa "posición pegajosa" por fila (eso
+              podía trabar el celular con cursos grandes). En cambio, esta
+              columna simplemente no tiene scroll horizontal propio, y
+              se desplaza verticalmente junto con el resto porque el
+              scroll vertical lo maneja el contenedor de más arriba. */}
+          <div style={{ width: anchoNombre, flexShrink: 0 }}>
+            <div style={{ background: COLORS.pineDark, color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, fontWeight: 700, padding: "6px 8px", display: "flex", alignItems: "center", height: 29, boxSizing: "border-box" }}>
+              Alumno
+            </div>
+            {alumnos.map((al, i) => (
               <div
+                key={al.id}
                 style={{
-                  position: "sticky", left: 0, zIndex: 2, background: COLORS.white, borderTop: `1px solid ${COLORS.line}`, borderRight: `1px solid ${COLORS.line}`,
-                  padding: "7px 8px", display: "flex", alignItems: "center", gap: 4, minWidth: 0,
+                  background: COLORS.white, borderTop: `1px solid ${COLORS.line}`, borderRight: `1px solid ${COLORS.line}`,
+                  padding: "7px 8px", display: "flex", alignItems: "center", gap: 4, minWidth: 0, height: 31, boxSizing: "border-box",
+                  contentVisibility: "auto", containIntrinsicSize: "auto 31px",
                 }}
               >
                 <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10.5, color: COLORS.inkSoft, flexShrink: 0 }}>{i + 1}.</span>
@@ -3977,24 +3974,42 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
                   {al.nombre}
                 </span>
               </div>
-              {columnas.map((c) => (
-                <CeldaNotaOficial
-                  key={al.id + "-" + c.key}
-                  valor={valores[c.key] || ""}
-                  calculado={calculadas.has(c.key)}
-                  tipo={c.tipo}
-                  notaAprobacion={notaAprobacion}
-                  soloLectura={!modoEdicion}
-                  onIntentarCambiar={(valorNuevo) => setPendiente({
-                    alumnoId: al.id, alumnoNombre: al.nombre, campo: c.key, columnaLabel: c.label,
-                    valorAnterior: (al.notasOficiales && al.notasOficiales[c.key]) || "(vacío)",
-                    valorNuevo: valorNuevo || "(vacío)",
-                  })}
+            ))}
+          </div>
+
+          {/* Panel de notas: acá sí hay scroll horizontal, para deslizar
+              entre las 7 columnas sin mover la columna de nombres. */}
+          <div style={{ overflowX: "auto", flex: 1 }}>
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(7, ${anchoColumna}px)`, width: "fit-content" }}>
+              {columnas.map((c, idx) => (
+                <EncabezadoColumnaEditable
+                  key={c.key + "-h"}
+                  columna={c}
+                  refAdicional={c.tipo === "nota" ? refNota : (idx === 0 ? refPrimeraColumna : null)}
+                  onAbrirRenombrar={(col) => setRenombrando({ key: col.key, label: col.label })}
                 />
               ))}
-            </React.Fragment>
-            );
-          })}
+
+              {alumnos.map((al) => {
+                const { valores, calculadas } = notasConPromedios(al.notasOficiales, promedioAuto);
+                return columnas.map((c) => (
+                  <CeldaNotaOficial
+                    key={al.id + "-" + c.key}
+                    valor={valores[c.key] || ""}
+                    calculado={calculadas.has(c.key)}
+                    tipo={c.tipo}
+                    notaAprobacion={notaAprobacion}
+                    soloLectura={!modoEdicion}
+                    onIntentarCambiar={(valorNuevo) => setPendiente({
+                      alumnoId: al.id, alumnoNombre: al.nombre, campo: c.key, columnaLabel: c.label,
+                      valorAnterior: (al.notasOficiales && al.notasOficiales[c.key]) || "(vacío)",
+                      valorNuevo: valorNuevo || "(vacío)",
+                    })}
+                  />
+                ));
+              })}
+            </div>
+          </div>
         </div>
       </div>
 
