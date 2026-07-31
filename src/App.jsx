@@ -3463,7 +3463,10 @@ function CalendarioAsistencia({ fechaInicial, diasCurso, diasClaseConfig, onSele
               <span style={{ width: 10, height: 10, borderRadius: 3, border: `2px solid ${COLORS.pine}`, display: "inline-block", boxSizing: "border-box" }} /> Seleccionado
             </span>
             <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <span style={{ width: 5, height: 5, borderRadius: "50%", background: COLORS.pine, display: "inline-block" }} /> Día de clase
+              <span style={{ width: 10, height: 10, borderRadius: 3, background: "rgba(31,76,67,0.14)", border: `1px solid ${COLORS.line}`, display: "inline-block", boxSizing: "border-box" }} /> Día de clase
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ width: 10, height: 10, borderRadius: 3, background: "rgba(184,92,80,0.14)", border: `1px solid ${COLORS.line}`, display: "inline-block", boxSizing: "border-box" }} /> Fin de semana
             </span>
           </div>
 
@@ -3483,8 +3486,18 @@ function CalendarioAsistencia({ fechaInicial, diasCurso, diasClaseConfig, onSele
               const esHoy = fechaCelda === hoy;
               const codigoSemana = DIAS_SEMANA[new Date(anio, mes, dia).getDay()].code;
               const esDiaConfigurado = tieneDiaConfigurado(diasClaseConfig, codigoSemana);
+              const esFinDeSemana = codigoSemana === "SA" || codigoSemana === "DO";
               const filaIndex = Math.floor(i / 7);
               const mostrarArriba = filaIndex >= totalFilas - 2;
+
+              // Prioridad de fondo: "no trabajado" (naranja, una decisión
+              // explícita) siempre gana; después "día de clase" (verde)
+              // le gana a un simple fin de semana (rosado).
+              let fondoCelda = esHoy ? COLORS.paperDim : COLORS.white;
+              if (esDiaConfigurado) fondoCelda = "rgba(31,76,67,0.14)";
+              if (esFinDeSemana) fondoCelda = "rgba(184,92,80,0.14)";
+              if (esDiaConfigurado && esFinDeSemana) fondoCelda = "rgba(31,76,67,0.14)";
+              if (marcado) fondoCelda = COLORS.ochre;
 
               return (
                 <div key={fechaCelda} style={{ position: "relative" }}>
@@ -3493,16 +3506,13 @@ function CalendarioAsistencia({ fechaInicial, diasCurso, diasClaseConfig, onSele
                     style={{
                       aspectRatio: "1", display: "flex", alignItems: "center", justifyContent: "center",
                       borderRadius: 8, cursor: "pointer", position: "relative",
-                      background: marcado ? COLORS.ochre : (esHoy ? COLORS.paperDim : COLORS.white),
+                      background: fondoCelda,
                       border: esSeleccionado ? `2px solid ${COLORS.pine}` : `1px solid ${marcado ? COLORS.ochre : COLORS.line}`,
                       color: marcado ? COLORS.white : COLORS.ink,
                       fontFamily: "'IBM Plex Mono', monospace", fontSize: 12.5, fontWeight: marcado ? 700 : 500,
                     }}
                   >
                     {dia}
-                    {esDiaConfigurado && !marcado && (
-                      <span style={{ position: "absolute", bottom: 3, width: 4, height: 4, borderRadius: "50%", background: COLORS.pine }} />
-                    )}
                   </div>
 
                   {popoverFecha === fechaCelda && (
