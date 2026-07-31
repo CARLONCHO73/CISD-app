@@ -3677,32 +3677,40 @@ function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlte
           <span onClick={() => setFecha(sumarDiasFecha(fecha, 1))} style={flechaBtnStyle}><ChevronRight size={18} strokeWidth={2.4} /></span>
         </div>
 
-        <div style={{ marginTop: 10 }}>
+        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
           <button
             ref={refMotivo}
             onClick={onTocarBotonMotivo}
+            title={noTrabajado ? `Día no trabajado: ${diaActual.motivo} (tocar para editar)` : "Marcar día no trabajado"}
             style={{
-              width: "100%", padding: "8px", borderRadius: 10, cursor: "pointer",
-              border: `1px solid ${COLORS.ochre}`, background: noTrabajado ? COLORS.ochre : COLORS.ochreSoft,
-              color: noTrabajado ? COLORS.white : COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 600,
+              flex: 1, minWidth: 0, padding: "10px 8px", borderRadius: 999, cursor: "pointer",
+              border: `1.5px solid ${COLORS.ochre}`, background: noTrabajado ? COLORS.ochre : COLORS.ochreSoft,
+              color: noTrabajado ? COLORS.white : COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 700,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              boxShadow: noTrabajado ? "0 2px 8px rgba(201,138,61,0.35)" : "none", transition: "box-shadow 0.15s, background 0.15s",
             }}
           >
-            {noTrabajado ? `Día no trabajado: ${diaActual.motivo} (tocar para editar)` : "Marcar día no trabajado"}
+            <Hand size={13} strokeWidth={2.2} style={{ flexShrink: 0 }} />
+            <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {noTrabajado ? `No trabajado: ${diaActual.motivo}` : "No trabajado"}
+            </span>
+          </button>
+
+          <button
+            ref={refCalendario}
+            onClick={() => setCalendarioAbierto(true)}
+            style={{
+              flex: 1, minWidth: 0, padding: "10px 8px", borderRadius: 999, cursor: "pointer",
+              border: `1.5px solid ${COLORS.pine}`, background: COLORS.white, color: COLORS.pineDark,
+              fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 700,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              boxShadow: "0 1px 4px rgba(21,53,49,0.12)", transition: "box-shadow 0.15s",
+            }}
+          >
+            <CalendarDays size={13} strokeWidth={2.2} style={{ flexShrink: 0 }} />
+            <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Calendario del mes</span>
           </button>
         </div>
-
-        <button
-          ref={refCalendario}
-          onClick={() => setCalendarioAbierto(true)}
-          style={{
-            marginTop: 8, width: "100%", padding: "8px", borderRadius: 10, cursor: "pointer",
-            border: `1px solid ${COLORS.pine}`, background: COLORS.white, color: COLORS.pineDark,
-            fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 600,
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-          }}
-        >
-          <CalendarDays size={14} strokeWidth={2.2} /> Ver calendario del mes
-        </button>
 
         <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, color: COLORS.inkSoft, marginTop: 6, textAlign: "center" }}>
           El horario de este curso se carga desde "Mi horario".
