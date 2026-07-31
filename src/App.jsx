@@ -3873,7 +3873,7 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
   const [pendiente, setPendiente] = useState(null); // { alumnoId, alumnoNombre, campo, columnaLabel, valorAnterior, valorNuevo }
   const [renombrando, setRenombrando] = useState(null); // { key, label } — modal de texto abierto
   const [pendienteRenombre, setPendienteRenombre] = useState(null); // { key, labelNuevo } — falta elegir alcance
-  const [tourActivo, setTourActivo] = useState(!tourVisto);
+  const [tourActivo, setTourActivo] = useState(false); // DESACTIVADO TEMPORALMENTE (prueba diagnóstica del freeze en celular)
   const [modoEdicion, setModoEdicion] = useState(false);
   const refGrilla = useRef(null);
   const refNota = useRef(null);
