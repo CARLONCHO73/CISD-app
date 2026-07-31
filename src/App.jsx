@@ -3367,7 +3367,7 @@ function FilaFebrero({ alumno, notaAprobacion, onCambiar }) {
 // ================================================================
 // ASISTENCIA — planilla diaria del curso
 // ================================================================
-function FilaAsistencia({ alumno, estado, onTocar }) {
+function FilaAsistencia({ alumno, numero, estado, onTocar }) {
   const colorNombre = alumno.genero === "M" ? COLORS.nombreM : COLORS.nombreF;
   const ESTILOS = {
     "": { bg: COLORS.white, color: COLORS.inkSoft, borde: COLORS.line, letra: "" },
@@ -3378,10 +3378,13 @@ function FilaAsistencia({ alumno, estado, onTocar }) {
   };
   const est = ESTILOS[estado] || ESTILOS[""];
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, padding: "9px 12px", borderBottom: `1px solid ${COLORS.line}` }}>
-      <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, fontWeight: 700, color: colorNombre, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1, minWidth: 0 }}>
-        {alumno.nombre}
-      </span>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "9px 12px", borderBottom: `1px solid ${COLORS.line}` }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: 6, flex: 1, minWidth: 0 }}>
+        <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: COLORS.inkSoft, flexShrink: 0 }}>{numero}.</span>
+        <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 15.5, fontWeight: 700, color: colorNombre, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+          {alumno.nombre}
+        </span>
+      </div>
       <button
         onClick={onTocar}
         style={{
@@ -3644,18 +3647,20 @@ function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlte
 
   return (
     <div style={{ position: "fixed", inset: 0, background: COLORS.paper, zIndex: 70, display: "flex", flexDirection: "column" }}>
-      <div style={{ background: COLORS.pineDark, color: COLORS.white, padding: "16px 18px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 600 }}>
-            <ClipboardCheck size={18} strokeWidth={2.2} /> Asistencia
+      <div style={{ background: COLORS.pineDark, color: COLORS.white, padding: "10px 18px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8, minWidth: 0, flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 600, flexShrink: 0 }}>
+              <ClipboardCheck size={18} strokeWidth={2.2} /> Asistencia
+            </div>
+            <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: COLORS.ochreSoft, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", minWidth: 0 }}>
+              {curso.nombre}
+            </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
             <BotonMenuAyuda onAyuda={() => setTourActivo(true)} />
             <span onClick={onCerrar} style={{ cursor: "pointer", fontSize: 20 }}>×</span>
           </div>
-        </div>
-        <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: COLORS.ochreSoft, marginTop: 4 }}>
-          {curso.nombre}
         </div>
       </div>
 
@@ -3679,59 +3684,62 @@ function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlte
           <span onClick={() => setFecha(sumarDiasFecha(fecha, 1))} style={flechaBtnStyle}><ChevronRight size={18} strokeWidth={2.4} /></span>
         </div>
 
-        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+        <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
           <button
             ref={refMotivo}
             onClick={onTocarBotonMotivo}
             title={noTrabajado ? `Día no trabajado: ${diaActual.motivo} (tocar para editar)` : "Marcar día no trabajado"}
             style={{
-              flex: 1, minWidth: 0, padding: "10px 8px", borderRadius: 999, cursor: "pointer",
+              flex: 1, minWidth: 0, padding: "9px 4px", borderRadius: 999, cursor: "pointer",
               border: `1.5px solid ${COLORS.ochre}`, background: noTrabajado ? COLORS.ochre : COLORS.ochreSoft,
-              color: noTrabajado ? COLORS.white : COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 700,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              color: noTrabajado ? COLORS.white : COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, fontWeight: 700,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
               boxShadow: noTrabajado ? "0 2px 8px rgba(201,138,61,0.35)" : "none", transition: "box-shadow 0.15s, background 0.15s",
             }}
           >
-            <Hand size={13} strokeWidth={2.2} style={{ flexShrink: 0 }} />
+            <Hand size={12} strokeWidth={2.2} style={{ flexShrink: 0 }} />
             <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {noTrabajado ? `No trabajado: ${diaActual.motivo}` : "No trabajado"}
+              {noTrabajado ? "No trabajado" : "No trabajado"}
             </span>
           </button>
 
           <button
             ref={refCalendario}
             onClick={() => setCalendarioAbierto(true)}
+            title="Ver calendario del mes"
             style={{
-              flex: 1, minWidth: 0, padding: "10px 8px", borderRadius: 999, cursor: "pointer",
+              flex: 1, minWidth: 0, padding: "9px 4px", borderRadius: 999, cursor: "pointer",
               border: `1.5px solid ${COLORS.pine}`, background: COLORS.white, color: COLORS.pineDark,
-              fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 700,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+              fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, fontWeight: 700,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
               boxShadow: "0 1px 4px rgba(21,53,49,0.12)", transition: "box-shadow 0.15s",
             }}
           >
-            <CalendarDays size={13} strokeWidth={2.2} style={{ flexShrink: 0 }} />
-            <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Calendario del mes</span>
+            <CalendarDays size={12} strokeWidth={2.2} style={{ flexShrink: 0 }} />
+            <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Calendario</span>
+          </button>
+
+          <button
+            onClick={() => onAlternarTodosPresentes(fecha)}
+            disabled={noTrabajado || alumnos.length === 0}
+            title={todosPresentesActivo ? "Confirmado: todos presentes (tocar para deshacer)" : "Marcar a todos como presentes"}
+            style={{
+              flex: 1, minWidth: 0, padding: "9px 4px", borderRadius: 999, cursor: noTrabajado ? "default" : "pointer",
+              border: `1.5px solid ${todosPresentesActivo ? COLORS.pine : COLORS.line}`,
+              background: todosPresentesActivo ? COLORS.pine : COLORS.white,
+              color: todosPresentesActivo ? COLORS.white : COLORS.pineDark,
+              fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, fontWeight: 700,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
+              opacity: noTrabajado || alumnos.length === 0 ? 0.5 : 1,
+              boxShadow: todosPresentesActivo ? "0 2px 8px rgba(31,76,67,0.3)" : "0 1px 4px rgba(21,53,49,0.12)", transition: "box-shadow 0.15s, background 0.15s",
+            }}
+          >
+            <span style={{ fontSize: 13, flexShrink: 0 }}>✓</span>
+            <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Presentes</span>
           </button>
         </div>
 
-        <button
-          onClick={() => onAlternarTodosPresentes(fecha)}
-          disabled={noTrabajado || alumnos.length === 0}
-          style={{
-            width: "100%", marginTop: 8, padding: "10px 8px", borderRadius: 999, cursor: noTrabajado ? "default" : "pointer",
-            border: `1.5px solid ${todosPresentesActivo ? COLORS.pine : COLORS.line}`,
-            background: todosPresentesActivo ? COLORS.pine : COLORS.white,
-            color: todosPresentesActivo ? COLORS.white : COLORS.pineDark,
-            fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 700,
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-            opacity: noTrabajado || alumnos.length === 0 ? 0.5 : 1,
-          }}
-        >
-          <span style={{ fontSize: 14 }}>✓</span>
-          {todosPresentesActivo ? "Todos presentes (confirmado — tocar para deshacer)" : "Todos presentes"}
-        </button>
-
-        <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, color: COLORS.inkSoft, marginTop: 6, textAlign: "center" }}>
+        <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, color: COLORS.inkSoft, marginTop: 8, textAlign: "center" }}>
           El horario de este curso se carga desde "Mi horario".
         </div>
       </div>
@@ -3759,6 +3767,7 @@ function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlte
               <div key={al.id} ref={i === 0 ? refCelda : null}>
                 <FilaAsistencia
                   alumno={al}
+                  numero={i + 1}
                   estado={(diaActual.marcas || {})[al.id] || ""}
                   onTocar={() => intentarAlternar(al.id)}
                 />
