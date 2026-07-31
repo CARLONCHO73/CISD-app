@@ -5698,11 +5698,39 @@ function CISDNavegacion() {
     return () => { activo = false; };
   }, []);
 
+  // Agrupa los guardados: si vas cargando varias notas seguidas y rápido
+  // (por ejemplo, consolidando todo un curso), no dispara un guardado
+  // pesado por cada celda — espera un instante de pausa y guarda todo
+  // junto una sola vez. Esto evita que muchos guardados encimados
+  // trabajen la pantalla en una conexión lenta.
+  const guardadoPendienteRef = useRef(null);
   useEffect(() => {
     if (!cargado) return;
-    window.storage.set("cisd-instituciones", JSON.stringify({ colegios, cursos, alumnosPorCurso, criterios, instanciasPorCurso, periodoPorCurso, criteriosUsadosP1PorCurso, p2ReactivadoPorCurso, ordenPorCurso, asistenciaPorCurso, diasClasePorCurso, notaAprobacion, nombresColumnasPorColegio, tourVistoPorPantalla, promedioAutoPorCurso, notas })).catch((err) => {
-      console.error("No se pudo guardar automáticamente", err);
-    });
+    const datosActuales = { colegios, cursos, alumnosPorCurso, criterios, instanciasPorCurso, periodoPorCurso, criteriosUsadosP1PorCurso, p2ReactivadoPorCurso, ordenPorCurso, asistenciaPorCurso, diasClasePorCurso, notaAprobacion, nombresColumnasPorColegio, tourVistoPorPantalla, promedioAutoPorCurso, notas };
+
+    function guardarYa() {
+      if (guardadoPendienteRef.current) {
+        clearTimeout(guardadoPendienteRef.current);
+        guardadoPendienteRef.current = null;
+      }
+      window.storage.set("cisd-instituciones", JSON.stringify(datosActuales)).catch((err) => {
+        console.error("No se pudo guardar automáticamente", err);
+      });
+    }
+
+    if (guardadoPendienteRef.current) clearTimeout(guardadoPendienteRef.current);
+    guardadoPendienteRef.current = setTimeout(guardarYa, 600);
+
+    // Si se cierra o se oculta la app justo durante esa pausa, guardamos
+    // ya mismo en vez de esperar, para no perder los últimos cambios.
+    document.addEventListener("visibilitychange", guardarYa);
+    window.addEventListener("pagehide", guardarYa);
+
+    return () => {
+      if (guardadoPendienteRef.current) clearTimeout(guardadoPendienteRef.current);
+      document.removeEventListener("visibilitychange", guardarYa);
+      window.removeEventListener("pagehide", guardarYa);
+    };
   }, [colegios, cursos, alumnosPorCurso, criterios, instanciasPorCurso, periodoPorCurso, criteriosUsadosP1PorCurso, p2ReactivadoPorCurso, ordenPorCurso, asistenciaPorCurso, diasClasePorCurso, notaAprobacion, nombresColumnasPorColegio, tourVistoPorPantalla, promedioAutoPorCurso, notas, cargado]);
 
   // Mientras un curso está en 1° cuatrimestre, registra qué criterios
