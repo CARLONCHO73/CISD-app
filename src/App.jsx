@@ -3905,7 +3905,7 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
     <div style={{ position: "fixed", inset: 0, background: COLORS.paper, zIndex: 65, display: "flex", flexDirection: "column" }}>
       <div style={{ background: COLORS.pineDark, color: COLORS.white, padding: "10px 18px 12px 18px", position: "relative" }}>
         <div style={{ position: "absolute", top: 8, right: 12 }}>
-          <BotonMenuAyuda onAyuda={() => setTourActivo(true)} />
+          <BotonMenuAyuda onAyuda={() => {}} /* Tutorial temporalmente desactivado en esta pantalla */ />
         </div>
         <div style={{ display: "flex", alignItems: "baseline", flexWrap: "wrap", gap: "3px 6px", paddingRight: 26 }}>
           <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: COLORS.ochreSoft }}>{colegio.nombre}</span>
