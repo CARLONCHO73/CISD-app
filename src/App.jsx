@@ -55,6 +55,30 @@ const DIAS_SEMANA = [
   { code: "VI", label: "Vie" },
   { code: "SA", label: "Sáb" },
 ];
+// Recuerda, solo en este dispositivo (no en la nube), en qué pantalla
+// quedó el docente por última vez — así, si el celular apaga la pantalla
+// y el navegador termina recargando la app de cero, vuelve a abrir en el
+// mismo lugar en vez de arrancar siempre desde "Mis colegios".
+function leerUltimoLugar(clave) {
+  try {
+    const valor = localStorage.getItem("cisd-ultimo-" + clave);
+    return valor === null ? null : JSON.parse(valor);
+  } catch {
+    return null;
+  }
+}
+function guardarUltimoLugar(clave, valor) {
+  try {
+    if (valor === null || valor === undefined || valor === false) {
+      localStorage.removeItem("cisd-ultimo-" + clave);
+    } else {
+      localStorage.setItem("cisd-ultimo-" + clave, JSON.stringify(valor));
+    }
+  } catch {
+    // Si el dispositivo no permite guardar (modo privado, etc.), no pasa nada grave: simplemente no recuerda el lugar.
+  }
+}
+
 function hoyISO() {
   const d = new Date();
   const yyyy = d.getFullYear();
@@ -3448,7 +3472,7 @@ function CalendarioAsistencia({ fechaInicial, diasCurso, diasClaseConfig, onSele
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(34,32,27,0.5)", zIndex: 80, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
-      <div style={{ background: COLORS.paper, borderRadius: 16, width: "100%", maxWidth: 420, maxHeight: "88vh", overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.3)" }}>
+      <div style={{ background: COLORS.paper, borderRadius: 16, width: "100%", maxWidth: 420, maxHeight: "88vh", overflowY: "auto", boxShadow: "0 12px 40px rgba(0,0,0,0.3)", position: "relative" }}>
         <div style={{ background: COLORS.pineDark, color: COLORS.white, padding: "14px 16px", borderRadius: "16px 16px 0 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 600 }}>
             <CalendarDays size={17} strokeWidth={2.2} /> Calendario
@@ -3524,36 +3548,43 @@ function CalendarioAsistencia({ fechaInicial, diasCurso, diasClaseConfig, onSele
                   >
                     {dia}
                   </div>
-
-                  {popoverFecha === fechaCelda && (
-                    <div
-                      style={{
-                        position: "absolute", zIndex: 85, left: "50%", transform: "translateX(-50%)",
-                        [mostrarArriba ? "bottom" : "top"]: "112%",
-                        width: 186, background: COLORS.paperDim, border: `1px solid ${COLORS.line}`, borderRadius: 10,
-                        padding: "10px 12px", boxShadow: "0 6px 20px rgba(21,53,49,0.22)",
-                      }}
-                    >
-                      <div style={{ display: "flex", justifyContent: "flex-end", marginTop: -3, marginRight: -4 }}>
-                        <span onClick={() => setPopoverFecha(null)} style={{ cursor: "pointer", fontSize: 15, color: COLORS.inkSoft, lineHeight: 1 }}>×</span>
-                      </div>
-                      <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, fontWeight: 700, color: COLORS.pineDark, marginBottom: 4 }}>
-                        Día marcado como no trabajado
-                      </div>
-                      <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, color: COLORS.inkSoft, marginBottom: 9, wordBreak: "break-word" }}>
-                        {registro.motivo}
-                      </div>
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                        <span onClick={() => onEditarDia(fechaCelda)} style={{ ...chipBase, background: COLORS.pine, color: COLORS.white }}>Editar</span>
-                        <span onClick={() => setConfirmarQuitarFecha(fechaCelda)} style={{ ...chipBase, background: COLORS.rose, color: COLORS.white }}>Quitar marca</span>
-                      </div>
-                    </div>
-                  )}
                 </div>
               );
             })}
           </div>
         </div>
+
+        {popoverFecha && diasCurso[popoverFecha] && (
+          <div
+            onClick={() => setPopoverFecha(null)}
+            style={{ position: "absolute", inset: 0, zIndex: 85, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: "100%", maxWidth: 240, background: COLORS.paperDim, border: `1px solid ${COLORS.line}`, borderRadius: 12,
+                padding: "16px 18px", boxShadow: "0 10px 30px rgba(21,53,49,0.3)", textAlign: "center",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: -6, marginRight: -6 }}>
+                <span onClick={() => setPopoverFecha(null)} style={{ cursor: "pointer", fontSize: 17, color: COLORS.inkSoft, lineHeight: 1 }}>×</span>
+              </div>
+              <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 700, color: COLORS.pineDark, marginBottom: 6 }}>
+                {formatFechaLarga(popoverFecha)}
+              </div>
+              <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, color: COLORS.inkSoft, marginBottom: 4 }}>
+                Día marcado como no trabajado
+              </div>
+              <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: COLORS.ink, fontWeight: 600, marginBottom: 14, wordBreak: "break-word" }}>
+                {diasCurso[popoverFecha].motivo}
+              </div>
+              <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+                <span onClick={() => onEditarDia(popoverFecha)} style={{ ...chipBase, background: COLORS.pine, color: COLORS.white }}>Editar</span>
+                <span onClick={() => setConfirmarQuitarFecha(popoverFecha)} style={{ ...chipBase, background: COLORS.rose, color: COLORS.white }}>Quitar marca</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {confirmarQuitarFecha && (
@@ -3579,13 +3610,15 @@ function CalendarioAsistencia({ fechaInicial, diasCurso, diasClaseConfig, onSele
 }
 
 function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlternarCelda, onAlternarTodosPresentes, onSetMotivo, onSetDiasClase, onCerrar, tourVisto, onMarcarTourVisto }) {
-  const [fecha, setFecha] = useState(hoyISO());
+  const [fecha, setFecha] = useState(() => leerUltimoLugar("asistenciaFecha") || hoyISO());
   const [motivoAbierto, setMotivoAbierto] = useState(false);
   const [borradorMotivo, setBorradorMotivo] = useState("");
   const [pendienteCelda, setPendienteCelda] = useState(null); // { alumnoId }
   const [autorizadoEdicionPasada, setAutorizadoEdicionPasada] = useState(false);
   const [confirmarSobrescribir, setConfirmarSobrescribir] = useState(false);
-  const [calendarioAbierto, setCalendarioAbierto] = useState(false);
+  const [calendarioAbierto, setCalendarioAbierto] = useState(() => !!leerUltimoLugar("asistenciaCalendarioAbierto"));
+  useEffect(() => { guardarUltimoLugar("asistenciaFecha", fecha); }, [fecha]);
+  useEffect(() => { guardarUltimoLugar("asistenciaCalendarioAbierto", calendarioAbierto); }, [calendarioAbierto]);
   const [tourActivo, setTourActivo] = useState(!tourVisto);
   const refFecha = useRef(null);
   const refMotivo = useRef(null);
@@ -5183,7 +5216,8 @@ function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno
   const [masivaAbierta, setMasivaAbierta] = useState(false);
   const [planillaAbierta, setPlanillaAbierta] = useState(false);
   const [recuperatorioAbierto, setRecuperatorioAbierto] = useState(null); // null | "diciembre" | "febrero"
-  const [asistenciaAbierta, setAsistenciaAbierta] = useState(false);
+  const [asistenciaAbierta, setAsistenciaAbierta] = useState(() => !!leerUltimoLugar("asistenciaAbierta"));
+  useEffect(() => { guardarUltimoLugar("asistenciaAbierta", asistenciaAbierta); }, [asistenciaAbierta]);
   const [informesAbierto, setInformesAbierto] = useState(false);
   const [menuRecuperatoriosAbierto, setMenuRecuperatoriosAbierto] = useState(false);
   const [editarNotaAprobacionAbierto, setEditarNotaAprobacionAbierto] = useState(false);
@@ -5662,13 +5696,22 @@ function CISDNavegacion() {
   // cuatrimestre en un curso (y se repite en el 2º cuatrimestre si el
   // docente no lo activó en el 1°). { curId, campo } o null.
   const [preguntaPromedio, setPreguntaPromedio] = useState(null);
-  const [colegioId, setColegioId] = useState(null);
-  const [cursoId, setCursoId] = useState(null);
-  const [fichaAlumnoId, setFichaAlumnoId] = useState(null);
+  const [colegioId, setColegioId] = useState(() => leerUltimoLugar("colegioId"));
+  const [cursoId, setCursoId] = useState(() => leerUltimoLugar("cursoId"));
+  const [fichaAlumnoId, setFichaAlumnoId] = useState(() => leerUltimoLugar("fichaAlumnoId"));
   const [cargado, setCargado] = useState(false);
   const [toast, setToast] = useState({ show: false, text: "" });
   const toastTimer = useRef(null);
   const refAyudaColegios = useRef(null);
+
+  // Guarda, en este dispositivo, el "último lugar" cada vez que cambia,
+  // para poder volver ahí si la app se recarga sola (por ejemplo, al
+  // apagarse la pantalla del celular un rato largo).
+  useEffect(() => { guardarUltimoLugar("colegioId", colegioId); }, [colegioId]);
+  useEffect(() => { guardarUltimoLugar("cursoId", cursoId); }, [cursoId]);
+  useEffect(() => { guardarUltimoLugar("fichaAlumnoId", fichaAlumnoId); }, [fichaAlumnoId]);
+  useEffect(() => { guardarUltimoLugar("mostrarHorario", mostrarHorario); }, [mostrarHorario]);
+  useEffect(() => { guardarUltimoLugar("mostrarNotas", mostrarNotas); }, [mostrarNotas]);
 
   // Nombre elegido por el docente (ej. "Profe Luis") y registro de qué
   // franjas horarias (mañana/tarde/noche) ya se saludaron hoy, para no
@@ -5680,8 +5723,8 @@ function CISDNavegacion() {
   const [pasoBienvenida, setPasoBienvenida] = useState("intro"); // "intro" | "nombre"
   const [mostrarCambiarNombre, setMostrarCambiarNombre] = useState(false);
   const [cargadoPerfil, setCargadoPerfil] = useState(false);
-  const [mostrarHorario, setMostrarHorario] = useState(false);
-  const [mostrarNotas, setMostrarNotas] = useState(false);
+  const [mostrarHorario, setMostrarHorario] = useState(() => !!leerUltimoLugar("mostrarHorario"));
+  const [mostrarNotas, setMostrarNotas] = useState(() => !!leerUltimoLugar("mostrarNotas"));
   // Notas libres del docente: reuniones, ideas, cualquier cosa. Cada una
   // puede quedar suelta (colegioId/cursoId null) o atada a un curso puntual.
   const [notas, setNotas] = useState([]);
