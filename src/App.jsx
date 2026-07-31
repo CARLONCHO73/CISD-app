@@ -5619,6 +5619,16 @@ function CISDNavegacion() {
   useEffect(() => {
     let activo = true;
     async function cargarPerfil() {
+      // Antes de decidir "no tiene nombre guardado = docente nuevo", nos
+      // aseguramos de que la sesión ya esté confirmada. Recién cargada la
+      // página, a veces la sesión tarda un instante en confirmarse — sin
+      // este resguardo, ese instante se podía confundir con "todavía no
+      // eligió un nombre" y mostraba la bienvenida de nuevo por error.
+      for (let intento = 0; intento < 6; intento++) {
+        const { data } = await supabase.auth.getSession();
+        if (data && data.session) break;
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
       try {
         const resultado = await window.storage.get("cisd-perfil-docente");
         if (activo && resultado && resultado.value) {
@@ -5647,6 +5657,16 @@ function CISDNavegacion() {
   useEffect(() => {
     let activo = true;
     async function cargar() {
+      // Mismo resguardo que en el perfil: esperamos a que la sesión esté
+      // confirmada antes de leer. Esto es crítico acá en particular: si
+      // se leyera "vacío" por error, el guardado automático de más abajo
+      // terminaría sobrescribiendo los datos reales en la nube con un
+      // estado vacío.
+      for (let intento = 0; intento < 6; intento++) {
+        const { data } = await supabase.auth.getSession();
+        if (data && data.session) break;
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
       try {
         const resultado = await window.storage.get("cisd-instituciones");
         if (activo && resultado && resultado.value) {
@@ -6735,6 +6755,50 @@ function AuthGate() {
   return null;
 }
 
+// Red de seguridad: si algo llegara a fallar al dibujar la pantalla, en
+// vez de que la app se vea rara o vuelva a pedir el nombre sin avisar,
+// muestra un cartel tranquilo explicando que hay un problema pasajero.
+// Los datos nunca se pierden por esto: están a salvo en la nube.
+class RedDeSeguridad extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: false };
+  }
+  static getDerivedStateFromError() {
+    return { error: true };
+  }
+  componentDidCatch(error, info) {
+    console.error("CISD - error atrapado por la red de seguridad:", error, info);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ minHeight: "100vh", background: COLORS.paper, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+          <div style={{ width: "100%", maxWidth: 340, textAlign: "center" }}>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 600, color: COLORS.pineDark, marginBottom: 10 }}>
+              Hubo un problema pasajero
+            </div>
+            <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, color: COLORS.inkSoft, marginBottom: 20, lineHeight: 1.5 }}>
+              Tus datos están a salvo en la nube, no se perdió nada. Tocá el botón para volver a cargar la app.
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              style={{ padding: "12px 24px", borderRadius: 999, border: "none", background: COLORS.pine, color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, fontWeight: 700, cursor: "pointer" }}
+            >
+              Recargar
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function App() {
-  return <AuthGate />;
+  return (
+    <RedDeSeguridad>
+      <AuthGate />
+    </RedDeSeguridad>
+  );
 }
