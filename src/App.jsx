@@ -1120,7 +1120,7 @@ function PantallaColegios({ colegios, cursosPorColegio, onAbrir, onAgregar, onRe
     : "Tocá un colegio para ver sus cursos, o sumá uno nuevo con el botón de abajo. Tocá el ⋮ para editarlo o eliminarlo.";
 
   return (
-    <div style={{ padding: "14px 16px 24px 16px" }}>
+    <div style={{ padding: "14px 16px 80px 16px" }}>
       <CuadroGuia texto={texto} />
 
       {colegios.map((col) => {
@@ -1160,14 +1160,20 @@ function PantallaColegios({ colegios, cursosPorColegio, onAbrir, onAgregar, onRe
       )}
 
       {onAbrirSugerencia && (
-        <div style={{ textAlign: "center", marginTop: 22 }}>
-          <span
-            onClick={onAbrirSugerencia}
-            style={{ cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: COLORS.inkSoft, textDecoration: "underline", textDecorationColor: COLORS.line }}
-          >
-            💬 La app está a prueba — dejá tu sugerencia
-          </span>
-        </div>
+        <button
+          onClick={onAbrirSugerencia}
+          style={{
+            position: "fixed", left: "50%", transform: "translateX(-50%)", bottom: 20, zIndex: 40,
+            display: "flex", alignItems: "center", gap: 7, whiteSpace: "nowrap",
+            padding: "11px 18px", borderRadius: 999, border: "none", cursor: "pointer",
+            background: COLORS.white, color: COLORS.pineDark,
+            fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 600,
+            boxShadow: "0 6px 18px rgba(21,53,49,0.22)",
+          }}
+        >
+          <StickyNote size={14} strokeWidth={2.3} color={COLORS.ochre} />
+          La app está a prueba — dejá tu sugerencia
+        </button>
       )}
 
       {tourActivo && (
