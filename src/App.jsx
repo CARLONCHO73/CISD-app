@@ -533,26 +533,36 @@ function TourGuiado({ pasos, onCerrar }) {
   const actual = pasos[paso];
 
   useEffect(() => {
-    function medir() {
-      const el = actual && actual.ref ? actual.ref.current : null;
+    const el = actual && actual.ref ? actual.ref.current : null;
+
+    // Reubica el cartel según la posición actual del elemento, sin mover
+    // la pantalla. Se usa tanto al cambiar de paso como al redimensionar.
+    function reubicar() {
       if (el) {
-        // Si el elemento a señalar es muy alto (ocupa buena parte de la
-        // pantalla), lo llevamos arriba del todo en vez de centrarlo, para
-        // dejar la mayor cantidad de espacio libre posible debajo y que el
-        // cartel de explicación tenga dónde ubicarse sin taparlo.
-        const previo = el.getBoundingClientRect();
-        const esAlto = previo.height > window.innerHeight * 0.45;
-        el.scrollIntoView({ behavior: "smooth", block: esAlto ? "start" : "center" });
         const r = el.getBoundingClientRect();
         setRect({ top: r.top, left: r.left, width: r.width, height: r.height });
       } else {
         setRect(null);
       }
     }
-    medir();
-    const t = setTimeout(medir, 280); // vuelve a medir después del scroll suave
-    window.addEventListener("resize", medir);
-    return () => { clearTimeout(t); window.removeEventListener("resize", medir); };
+
+    // Lleva el elemento señalado a la vista. Solo se hace al entrar a un
+    // paso nuevo del tour, nunca en respuesta a un simple cambio de
+    // tamaño de pantalla — en el celular, ocultarse la barra de
+    // direcciones al hacer scroll dispara ese mismo evento de "cambio de
+    // tamaño", y si reaccionáramos haciendo scroll de nuevo ahí, se
+    // podía formar un círculo sin fin (cambia tamaño → scroll → cambia
+    // tamaño → scroll…) que llegaba a trabar la pantalla por completo.
+    if (el) {
+      const previo = el.getBoundingClientRect();
+      const esAlto = previo.height > window.innerHeight * 0.45;
+      el.scrollIntoView({ behavior: "smooth", block: esAlto ? "start" : "center" });
+    }
+
+    reubicar();
+    const t = setTimeout(reubicar, 280); // vuelve a medir después del scroll suave
+    window.addEventListener("resize", reubicar);
+    return () => { clearTimeout(t); window.removeEventListener("resize", reubicar); };
   }, [paso, actual]);
 
   if (!actual) return null;
