@@ -55,30 +55,6 @@ const DIAS_SEMANA = [
   { code: "VI", label: "Vie" },
   { code: "SA", label: "Sáb" },
 ];
-// Recuerda, solo en este dispositivo (no en la nube), en qué pantalla
-// quedó el docente por última vez — así, si el celular apaga la pantalla
-// y el navegador termina recargando la app de cero, vuelve a abrir en el
-// mismo lugar en vez de arrancar siempre desde "Mis colegios".
-function leerUltimoLugar(clave) {
-  try {
-    const valor = localStorage.getItem("cisd-ultimo-" + clave);
-    return valor === null ? null : JSON.parse(valor);
-  } catch {
-    return null;
-  }
-}
-function guardarUltimoLugar(clave, valor) {
-  try {
-    if (valor === null || valor === undefined || valor === false) {
-      localStorage.removeItem("cisd-ultimo-" + clave);
-    } else {
-      localStorage.setItem("cisd-ultimo-" + clave, JSON.stringify(valor));
-    }
-  } catch {
-    // Si el dispositivo no permite guardar (modo privado, etc.), no pasa nada grave: simplemente no recuerda el lugar.
-  }
-}
-
 function hoyISO() {
   const d = new Date();
   const yyyy = d.getFullYear();
@@ -3610,15 +3586,13 @@ function CalendarioAsistencia({ fechaInicial, diasCurso, diasClaseConfig, onSele
 }
 
 function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlternarCelda, onAlternarTodosPresentes, onSetMotivo, onSetDiasClase, onCerrar, tourVisto, onMarcarTourVisto }) {
-  const [fecha, setFecha] = useState(() => leerUltimoLugar("asistenciaFecha") || hoyISO());
+  const [fecha, setFecha] = useState(hoyISO());
   const [motivoAbierto, setMotivoAbierto] = useState(false);
   const [borradorMotivo, setBorradorMotivo] = useState("");
   const [pendienteCelda, setPendienteCelda] = useState(null); // { alumnoId }
   const [autorizadoEdicionPasada, setAutorizadoEdicionPasada] = useState(false);
   const [confirmarSobrescribir, setConfirmarSobrescribir] = useState(false);
-  const [calendarioAbierto, setCalendarioAbierto] = useState(() => !!leerUltimoLugar("asistenciaCalendarioAbierto"));
-  useEffect(() => { guardarUltimoLugar("asistenciaFecha", fecha); }, [fecha]);
-  useEffect(() => { guardarUltimoLugar("asistenciaCalendarioAbierto", calendarioAbierto); }, [calendarioAbierto]);
+  const [calendarioAbierto, setCalendarioAbierto] = useState(false);
   const [tourActivo, setTourActivo] = useState(!tourVisto);
   const refFecha = useRef(null);
   const refMotivo = useRef(null);
@@ -5216,8 +5190,7 @@ function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno
   const [masivaAbierta, setMasivaAbierta] = useState(false);
   const [planillaAbierta, setPlanillaAbierta] = useState(false);
   const [recuperatorioAbierto, setRecuperatorioAbierto] = useState(null); // null | "diciembre" | "febrero"
-  const [asistenciaAbierta, setAsistenciaAbierta] = useState(() => !!leerUltimoLugar("asistenciaAbierta"));
-  useEffect(() => { guardarUltimoLugar("asistenciaAbierta", asistenciaAbierta); }, [asistenciaAbierta]);
+  const [asistenciaAbierta, setAsistenciaAbierta] = useState(false);
   const [informesAbierto, setInformesAbierto] = useState(false);
   const [menuRecuperatoriosAbierto, setMenuRecuperatoriosAbierto] = useState(false);
   const [editarNotaAprobacionAbierto, setEditarNotaAprobacionAbierto] = useState(false);
@@ -5696,22 +5669,13 @@ function CISDNavegacion() {
   // cuatrimestre en un curso (y se repite en el 2º cuatrimestre si el
   // docente no lo activó en el 1°). { curId, campo } o null.
   const [preguntaPromedio, setPreguntaPromedio] = useState(null);
-  const [colegioId, setColegioId] = useState(() => leerUltimoLugar("colegioId"));
-  const [cursoId, setCursoId] = useState(() => leerUltimoLugar("cursoId"));
-  const [fichaAlumnoId, setFichaAlumnoId] = useState(() => leerUltimoLugar("fichaAlumnoId"));
+  const [colegioId, setColegioId] = useState(null);
+  const [cursoId, setCursoId] = useState(null);
+  const [fichaAlumnoId, setFichaAlumnoId] = useState(null);
   const [cargado, setCargado] = useState(false);
   const [toast, setToast] = useState({ show: false, text: "" });
   const toastTimer = useRef(null);
   const refAyudaColegios = useRef(null);
-
-  // Guarda, en este dispositivo, el "último lugar" cada vez que cambia,
-  // para poder volver ahí si la app se recarga sola (por ejemplo, al
-  // apagarse la pantalla del celular un rato largo).
-  useEffect(() => { guardarUltimoLugar("colegioId", colegioId); }, [colegioId]);
-  useEffect(() => { guardarUltimoLugar("cursoId", cursoId); }, [cursoId]);
-  useEffect(() => { guardarUltimoLugar("fichaAlumnoId", fichaAlumnoId); }, [fichaAlumnoId]);
-  useEffect(() => { guardarUltimoLugar("mostrarHorario", mostrarHorario); }, [mostrarHorario]);
-  useEffect(() => { guardarUltimoLugar("mostrarNotas", mostrarNotas); }, [mostrarNotas]);
 
   // Nombre elegido por el docente (ej. "Profe Luis") y registro de qué
   // franjas horarias (mañana/tarde/noche) ya se saludaron hoy, para no
@@ -5723,8 +5687,8 @@ function CISDNavegacion() {
   const [pasoBienvenida, setPasoBienvenida] = useState("intro"); // "intro" | "nombre"
   const [mostrarCambiarNombre, setMostrarCambiarNombre] = useState(false);
   const [cargadoPerfil, setCargadoPerfil] = useState(false);
-  const [mostrarHorario, setMostrarHorario] = useState(() => !!leerUltimoLugar("mostrarHorario"));
-  const [mostrarNotas, setMostrarNotas] = useState(() => !!leerUltimoLugar("mostrarNotas"));
+  const [mostrarHorario, setMostrarHorario] = useState(false);
+  const [mostrarNotas, setMostrarNotas] = useState(false);
   // Notas libres del docente: reuniones, ideas, cualquier cosa. Cada una
   // puede quedar suelta (colegioId/cursoId null) o atada a un curso puntual.
   const [notas, setNotas] = useState([]);
