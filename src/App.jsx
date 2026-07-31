@@ -691,8 +691,8 @@ function EncabezadoNav({ eyebrow, titulo, subtitulo, accion, onAyuda, partes }) 
           {accion && <div style={{ flexShrink: 0 }}>{accion}</div>}
         </div>
       ) : (
-        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 10, paddingRight: onAyuda ? 26 : 0 }}>
-          <div style={{ minWidth: 0 }}>
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", flexWrap: "wrap", gap: "4px 10px", paddingRight: onAyuda ? 26 : 0 }}>
+          <div style={{ minWidth: 180, flex: "1 1 180px" }}>
             <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: COLORS.ochreSoft, letterSpacing: 0.4, marginBottom: 2 }}>
               {eyebrow}
             </div>
