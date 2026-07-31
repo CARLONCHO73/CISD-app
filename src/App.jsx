@@ -55,6 +55,33 @@ const DIAS_SEMANA = [
   { code: "VI", label: "Vie" },
   { code: "SA", label: "Sáb" },
 ];
+// Recuerda, solo en este dispositivo (no en la nube), la navegación
+// principal donde quedó el docente por última vez — así, si la app se
+// recarga sola (pantalla apagada, se cierra sin querer, etc.), vuelve a
+// abrir en el mismo lugar en vez de arrancar siempre desde "Mis
+// colegios". A propósito, esta primera etapa solo cubre la navegación
+// principal (colegio/curso/ficha/horario/bitácora) — pantallas puntuales
+// como Asistencia se suman más adelante, por separado.
+function leerUltimoLugar(clave) {
+  try {
+    const valor = localStorage.getItem("cisd-ultimo-" + clave);
+    return valor === null ? null : JSON.parse(valor);
+  } catch {
+    return null;
+  }
+}
+function guardarUltimoLugar(clave, valor) {
+  try {
+    if (valor === null || valor === undefined || valor === false) {
+      localStorage.removeItem("cisd-ultimo-" + clave);
+    } else {
+      localStorage.setItem("cisd-ultimo-" + clave, JSON.stringify(valor));
+    }
+  } catch {
+    // Si el dispositivo no permite guardar (modo privado, etc.), no pasa nada grave.
+  }
+}
+
 function hoyISO() {
   const d = new Date();
   const yyyy = d.getFullYear();
@@ -5669,13 +5696,41 @@ function CISDNavegacion() {
   // cuatrimestre en un curso (y se repite en el 2º cuatrimestre si el
   // docente no lo activó en el 1°). { curId, campo } o null.
   const [preguntaPromedio, setPreguntaPromedio] = useState(null);
-  const [colegioId, setColegioId] = useState(null);
-  const [cursoId, setCursoId] = useState(null);
-  const [fichaAlumnoId, setFichaAlumnoId] = useState(null);
+  const [colegioId, setColegioId] = useState(() => leerUltimoLugar("colegioId"));
+  const [cursoId, setCursoId] = useState(() => leerUltimoLugar("cursoId"));
+  const [fichaAlumnoId, setFichaAlumnoId] = useState(() => leerUltimoLugar("fichaAlumnoId"));
   const [cargado, setCargado] = useState(false);
   const [toast, setToast] = useState({ show: false, text: "" });
   const toastTimer = useRef(null);
   const refAyudaColegios = useRef(null);
+
+  // Guarda el "último lugar" (navegación principal) cada vez que cambia.
+  useEffect(() => { guardarUltimoLugar("colegioId", colegioId); }, [colegioId]);
+  useEffect(() => { guardarUltimoLugar("cursoId", cursoId); }, [cursoId]);
+  useEffect(() => { guardarUltimoLugar("fichaAlumnoId", fichaAlumnoId); }, [fichaAlumnoId]);
+  useEffect(() => { guardarUltimoLugar("mostrarHorario", mostrarHorario); }, [mostrarHorario]);
+  useEffect(() => { guardarUltimoLugar("mostrarNotas", mostrarNotas); }, [mostrarNotas]);
+
+  // Una sola vez, apenas terminan de cargar los datos reales: si el
+  // "último lugar" restaurado apunta a un colegio/curso/alumno que ya no
+  // existe (se borró, o el dato todavía no cargó bien), lo descartamos
+  // en silencio en vez de dejar la app en un estado inconsistente.
+  useEffect(() => {
+    if (!cargado) return;
+    if (colegioId && !colegios.some((c) => c.id === colegioId)) {
+      setColegioId(null); setCursoId(null); setFichaAlumnoId(null);
+      return;
+    }
+    if (cursoId && !cursos.some((c) => c.id === cursoId)) {
+      setCursoId(null); setFichaAlumnoId(null);
+      return;
+    }
+    if (fichaAlumnoId && cursoId) {
+      const listaAlumnos = alumnosPorCurso[cursoId] || [];
+      if (!listaAlumnos.some((a) => a.id === fichaAlumnoId)) setFichaAlumnoId(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cargado]);
 
   // Nombre elegido por el docente (ej. "Profe Luis") y registro de qué
   // franjas horarias (mañana/tarde/noche) ya se saludaron hoy, para no
@@ -5687,8 +5742,8 @@ function CISDNavegacion() {
   const [pasoBienvenida, setPasoBienvenida] = useState("intro"); // "intro" | "nombre"
   const [mostrarCambiarNombre, setMostrarCambiarNombre] = useState(false);
   const [cargadoPerfil, setCargadoPerfil] = useState(false);
-  const [mostrarHorario, setMostrarHorario] = useState(false);
-  const [mostrarNotas, setMostrarNotas] = useState(false);
+  const [mostrarHorario, setMostrarHorario] = useState(() => !!leerUltimoLugar("mostrarHorario"));
+  const [mostrarNotas, setMostrarNotas] = useState(() => !!leerUltimoLugar("mostrarNotas"));
   // Notas libres del docente: reuniones, ideas, cualquier cosa. Cada una
   // puede quedar suelta (colegioId/cursoId null) o atada a un curso puntual.
   const [notas, setNotas] = useState([]);
