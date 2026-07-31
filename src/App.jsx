@@ -122,7 +122,7 @@ function fechasClaseDictada(diasCurso) {
     const dia = diasCurso[f];
     if (!dia || dia.motivo) return false;
     const marcas = dia.marcas || {};
-    return Object.values(marcas).some((v) => v === "A" || v === "T" || v === "J");
+    return Object.values(marcas).some((v) => v === "A" || v === "T" || v === "J" || v === "P");
   });
 }
 
@@ -3371,6 +3371,7 @@ function FilaAsistencia({ alumno, estado, onTocar }) {
   const colorNombre = alumno.genero === "M" ? COLORS.nombreM : COLORS.nombreF;
   const ESTILOS = {
     "": { bg: COLORS.white, color: COLORS.inkSoft, borde: COLORS.line, letra: "" },
+    P: { bg: "#EAF3EC", color: COLORS.pine, borde: "#9FCBA8", letra: "✓" },
     A: { bg: COLORS.notaRoja, color: COLORS.white, borde: COLORS.notaRoja, letra: "A" },
     T: { bg: COLORS.ochre, color: COLORS.white, borde: COLORS.ochre, letra: "T" },
     J: { bg: "#3B7EA6", color: COLORS.white, borde: "#3B7EA6", letra: "J" },
@@ -3568,7 +3569,7 @@ function CalendarioAsistencia({ fechaInicial, diasCurso, diasClaseConfig, onSele
   );
 }
 
-function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlternarCelda, onSetMotivo, onSetDiasClase, onCerrar, tourVisto, onMarcarTourVisto }) {
+function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlternarCelda, onAlternarTodosPresentes, onSetMotivo, onSetDiasClase, onCerrar, tourVisto, onMarcarTourVisto }) {
   const [fecha, setFecha] = useState(hoyISO());
   const [motivoAbierto, setMotivoAbierto] = useState(false);
   const [borradorMotivo, setBorradorMotivo] = useState("");
@@ -3593,6 +3594,7 @@ function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlte
   const esPasado = fecha < hoy;
   const diaActual = diasCurso[fecha] || { motivo: null, marcas: {} };
   const noTrabajado = !!diaActual.motivo;
+  const todosPresentesActivo = alumnos.length > 0 && alumnos.every((al) => (diaActual.marcas || {})[al.id] === "P");
   const diaSemana = codigoDiaSemana(fecha);
   const esDiaConfigurado = tieneDiaConfigurado(diasClaseConfig, diaSemana);
 
@@ -3711,6 +3713,23 @@ function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlte
             <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Calendario del mes</span>
           </button>
         </div>
+
+        <button
+          onClick={() => onAlternarTodosPresentes(fecha)}
+          disabled={noTrabajado || alumnos.length === 0}
+          style={{
+            width: "100%", marginTop: 8, padding: "10px 8px", borderRadius: 999, cursor: noTrabajado ? "default" : "pointer",
+            border: `1.5px solid ${todosPresentesActivo ? COLORS.pine : COLORS.line}`,
+            background: todosPresentesActivo ? COLORS.pine : COLORS.white,
+            color: todosPresentesActivo ? COLORS.white : COLORS.pineDark,
+            fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 700,
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            opacity: noTrabajado || alumnos.length === 0 ? 0.5 : 1,
+          }}
+        >
+          <span style={{ fontSize: 14 }}>✓</span>
+          {todosPresentesActivo ? "Todos presentes (confirmado — tocar para deshacer)" : "Todos presentes"}
+        </button>
 
         <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, color: COLORS.inkSoft, marginTop: 6, textAlign: "center" }}>
           El horario de este curso se carga desde "Mi horario".
@@ -5144,7 +5163,7 @@ function PantallaHorarioDocente({ colegios, cursosPorColegio, diasClasePorCurso,
   );
 }
 
-function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno, onEditarAlumno, onAbrirFicha, onVolver, criterios, ordenPorCurso, onReordenarCriterios, onAgregarCriterio, onUsarCriterio, onUsarCriterioEnTodos, onQuitarCriterio, onEditarCriterio, onEliminarCriterioDefinitivo, periodo, onCambiarPeriodo, instanciasPorCriterio, onGuardarMasivo, onAgregarInstancia, notaAprobacion, onCambiarNotaAprobacion, onCambiarNotaOficial, onCambiarNotaRecuperatorio, nombresColumnasPorColegio, onRenombrarColumnaNota, diasCurso, diasClaseConfig, onAlternarCeldaAsistencia, onSetMotivoNoTrabajado, onSetDiasClase, tourVisto, onMarcarTourVisto, tourVistoPorPantalla, onMarcarTourVistoPantalla, promedioAuto, onTogglePromedioAuto }) {
+function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno, onEditarAlumno, onAbrirFicha, onVolver, criterios, ordenPorCurso, onReordenarCriterios, onAgregarCriterio, onUsarCriterio, onUsarCriterioEnTodos, onQuitarCriterio, onEditarCriterio, onEliminarCriterioDefinitivo, periodo, onCambiarPeriodo, instanciasPorCriterio, onGuardarMasivo, onAgregarInstancia, notaAprobacion, onCambiarNotaAprobacion, onCambiarNotaOficial, onCambiarNotaRecuperatorio, nombresColumnasPorColegio, onRenombrarColumnaNota, diasCurso, diasClaseConfig, onAlternarCeldaAsistencia, onAlternarTodosPresentes, onSetMotivoNoTrabajado, onSetDiasClase, tourVisto, onMarcarTourVisto, tourVistoPorPantalla, onMarcarTourVistoPantalla, promedioAuto, onTogglePromedioAuto }) {
   const [busqueda, setBusqueda] = useState("");
   const [masivaAbierta, setMasivaAbierta] = useState(false);
   const [planillaAbierta, setPlanillaAbierta] = useState(false);
@@ -5340,6 +5359,7 @@ function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno
           diasCurso={diasCurso || {}}
           diasClaseConfig={diasClaseConfig || []}
           onAlternarCelda={onAlternarCeldaAsistencia}
+          onAlternarTodosPresentes={onAlternarTodosPresentes}
           onSetMotivo={onSetMotivoNoTrabajado}
           onSetDiasClase={onSetDiasClase}
           onCerrar={() => setAsistenciaAbierta(false)}
@@ -5992,8 +6012,33 @@ function CISDNavegacion() {
     setTourVistoPorPantalla((prev) => (prev[pantallaId] ? prev : { ...prev, [pantallaId]: true }));
   }
 
+  // Marca a todos los alumnos del curso como "presente" ese día, para que
+  // quede un registro real de que sí se tomó asistencia (en vez de que el
+  // día simplemente no exista en los datos, indistinguible de un día en
+  // que directamente no se entró a Asistencia). Si ya estaba confirmado
+  // así, tocar de nuevo lo deshace.
+  function alternarTodosPresentes(curId, fecha, alumnosIds) {
+    setAsistenciaPorCurso((prev) => {
+      const diasCurso = prev[curId] || {};
+      const dia = diasCurso[fecha] || { motivo: null, marcas: {} };
+      const marcasActuales = dia.marcas || {};
+      const yaConfirmado = alumnosIds.length > 0 && alumnosIds.every((id) => marcasActuales[id] === "P");
+      const nuevasMarcas = { ...marcasActuales };
+      if (yaConfirmado) {
+        alumnosIds.forEach((id) => { if (nuevasMarcas[id] === "P") delete nuevasMarcas[id]; });
+      } else {
+        alumnosIds.forEach((id) => { nuevasMarcas[id] = "P"; });
+      }
+      return {
+        ...prev,
+        [curId]: { ...diasCurso, [fecha]: { ...dia, marcas: nuevasMarcas } },
+      };
+    });
+  }
+
+
   function alternarCeldaAsistencia(curId, fecha, alumnoId) {
-    const SIGUIENTE = { "": "A", A: "T", T: "J", J: "" };
+    const SIGUIENTE = { "": "A", P: "A", A: "T", T: "J", J: "" };
     setAsistenciaPorCurso((prev) => {
       const diasCurso = prev[curId] || {};
       const dia = diasCurso[fecha] || { motivo: null, marcas: {} };
@@ -6435,6 +6480,7 @@ function CISDNavegacion() {
             diasCurso={asistenciaPorCurso[cursoActual.id] || {}}
             diasClaseConfig={diasClasePorCurso[cursoActual.id] || []}
             onAlternarCeldaAsistencia={(fecha, alumnoId) => alternarCeldaAsistencia(cursoActual.id, fecha, alumnoId)}
+            onAlternarTodosPresentes={(fecha) => alternarTodosPresentes(cursoActual.id, fecha, (alumnosPorCurso[cursoActual.id] || []).map((a) => a.id))}
             onSetMotivoNoTrabajado={(fecha, motivo) => setMotivoNoTrabajado(cursoActual.id, fecha, motivo)}
             onSetDiasClase={(dias) => setDiasClaseCurso(cursoActual.id, dias)}
             tourVisto={!!tourVistoPorPantalla.aula}
