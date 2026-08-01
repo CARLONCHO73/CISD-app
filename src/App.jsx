@@ -5673,6 +5673,7 @@ function CISDNavegacion() {
   const [cursoId, setCursoId] = useState(null);
   const [fichaAlumnoId, setFichaAlumnoId] = useState(null);
   const [cargado, setCargado] = useState(false);
+  const [errorCargaSesion, setErrorCargaSesion] = useState(false);
   const [toast, setToast] = useState({ show: false, text: "" });
   const toastTimer = useRef(null);
   const refAyudaColegios = useRef(null);
@@ -5704,15 +5705,21 @@ function CISDNavegacion() {
   useEffect(() => {
     let activo = true;
     async function cargarPerfil() {
-      // Antes de decidir "no tiene nombre guardado = docente nuevo", nos
-      // aseguramos de que la sesión ya esté confirmada. Recién cargada la
-      // página, a veces la sesión tarda un instante en confirmarse — sin
-      // este resguardo, ese instante se podía confundir con "todavía no
-      // eligió un nombre" y mostraba la bienvenida de nuevo por error.
-      for (let intento = 0; intento < 6; intento++) {
+      // Esperamos a que la sesión esté confirmada antes de leer NADA. Si
+      // después de un buen rato (20 segundos, muchísimo más que lo normal)
+      // seguimos sin poder confirmarla, NO seguimos adelante: quedarnos
+      // pidiendo se ve peor un instante, pero evita el riesgo real de
+      // tratar a alguien como "docente nuevo" y terminar guardando un
+      // estado vacío encima de sus datos reales.
+      let sesionOk = false;
+      for (let intento = 0; intento < 40; intento++) {
         const { data } = await supabase.auth.getSession();
-        if (data && data.session) break;
-        await new Promise((resolve) => setTimeout(resolve, 250));
+        if (data && data.session) { sesionOk = true; break; }
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+      if (!sesionOk) {
+        if (activo) setErrorCargaSesion(true);
+        return;
       }
       try {
         const resultado = await window.storage.get("cisd-perfil-docente");
@@ -5742,15 +5749,20 @@ function CISDNavegacion() {
   useEffect(() => {
     let activo = true;
     async function cargar() {
-      // Mismo resguardo que en el perfil: esperamos a que la sesión esté
-      // confirmada antes de leer. Esto es crítico acá en particular: si
-      // se leyera "vacío" por error, el guardado automático de más abajo
-      // terminaría sobrescribiendo los datos reales en la nube con un
-      // estado vacío.
-      for (let intento = 0; intento < 6; intento++) {
+      // Mismo criterio que en el perfil, reforzado: si no logramos
+      // confirmar la sesión, no avanzamos bajo ninguna circunstancia. Acá
+      // es todavía más crítico que en el perfil, porque avanzar sin
+      // confirmar podía terminar guardando colegios/cursos/alumnos vacíos
+      // encima de los datos reales del docente.
+      let sesionOk = false;
+      for (let intento = 0; intento < 40; intento++) {
         const { data } = await supabase.auth.getSession();
-        if (data && data.session) break;
-        await new Promise((resolve) => setTimeout(resolve, 250));
+        if (data && data.session) { sesionOk = true; break; }
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+      if (!sesionOk) {
+        if (activo) setErrorCargaSesion(true);
+        return;
       }
       try {
         const resultado = await window.storage.get("cisd-instituciones");
@@ -6284,6 +6296,28 @@ function CISDNavegacion() {
 
   const cursosPorColegio = {};
   colegios.forEach((c) => { cursosPorColegio[c.id] = cursosDe(c.id); });
+
+  if (errorCargaSesion) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: COLORS.paper, padding: 24 }}>
+        <style>{`@import url('${FONT_URL}');`}</style>
+        <div style={{ width: "100%", maxWidth: 320, textAlign: "center" }}>
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: 20, fontWeight: 600, color: COLORS.pineDark, marginBottom: 10 }}>
+            No pudimos confirmar tu sesión
+          </div>
+          <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, color: COLORS.inkSoft, marginBottom: 20, lineHeight: 1.5 }}>
+            Puede ser la conexión a internet. Por seguridad, preferimos no seguir hasta confirmarlo — así ningún dato tuyo corre riesgo. Revisá tu conexión y tocá el botón para reintentar.
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            style={{ padding: "12px 24px", borderRadius: 999, border: "none", background: COLORS.pine, color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, fontWeight: 700, cursor: "pointer" }}
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!cargado || !cargadoPerfil) {
     return (
