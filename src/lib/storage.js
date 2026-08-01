@@ -31,6 +31,54 @@ function estaVacio(valor) {
   );
 }
 
+// Cuántas copias de respaldo se conservan por docente antes de empezar a
+// descartar las más viejas. Son archivos livianos (texto), así que ser
+// generoso acá no cuesta casi nada.
+const MAX_RESPALDOS = 20;
+
+// Antes de sobrescribir los datos principales (colegios/cursos/alumnos),
+// guarda una copia de "cómo estaba todo un instante antes" en una tabla
+// aparte. Es una red de seguridad invisible para el docente: no cambia
+// nada de lo que ve ni de cómo usa la app, pero si algún día un guardado
+// sale mal, hay de dónde recuperar lo de un ratito antes. Solo se
+// respalda si la versión anterior tenía contenido real (para no llenar
+// el historial de copias vacías sin sentido).
+async function generarRespaldoSiHaceFalta(userId) {
+  try {
+    const { data: filaActual } = await supabase
+      .from("datos_docente")
+      .select("datos")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    const anterior = filaActual && filaActual.datos;
+    const teniaContenido =
+      anterior &&
+      ((Array.isArray(anterior.colegios) && anterior.colegios.length > 0) ||
+        (Array.isArray(anterior.cursos) && anterior.cursos.length > 0));
+
+    if (!teniaContenido) return;
+
+    await supabase.from("respaldo_datos_docente").insert({ user_id: userId, datos: anterior });
+
+    // Recorta el historial: se queda solo con las últimas MAX_RESPALDOS copias.
+    const { data: viejos } = await supabase
+      .from("respaldo_datos_docente")
+      .select("id")
+      .eq("user_id", userId)
+      .order("creado_en", { ascending: false })
+      .range(MAX_RESPALDOS, MAX_RESPALDOS + 200);
+
+    if (viejos && viejos.length > 0) {
+      await supabase.from("respaldo_datos_docente").delete().in("id", viejos.map((v) => v.id));
+    }
+  } catch (err) {
+    // Si el respaldo falla por algún motivo, no bloqueamos el guardado
+    // normal por eso — es una capa extra, no el guardado principal.
+    console.error("No se pudo generar el respaldo automático:", err);
+  }
+}
+
 window.storage = {
   async get(key) {
     const columna = COLUMNA_POR_CLAVE[key];
@@ -66,6 +114,10 @@ window.storage = {
       parsed = JSON.parse(value);
     } catch {
       parsed = value;
+    }
+
+    if (columna === "datos") {
+      await generarRespaldoSiHaceFalta(userId);
     }
 
     const { error } = await supabase
