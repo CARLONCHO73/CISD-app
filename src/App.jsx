@@ -5938,13 +5938,6 @@ function CISDNavegacion() {
   // silencio en vez de dejar la app en un estado inconsistente.
   useEffect(() => {
     if (!cargado) return;
-    console.log("DIAGNOSTICO recordar-lugar:", {
-      colegioId, cursoId, fichaAlumnoId,
-      cantColegios: colegios.length, cantCursos: cursos.length,
-      colegioEncontrado: colegios.some((c) => c.id === colegioId),
-      cursoEncontrado: cursos.some((c) => c.id === cursoId),
-      idsCursos: cursos.map((c) => c.id),
-    });
     if (colegioId && !colegios.some((c) => c.id === colegioId)) {
       setColegioId(null); setCursoId(null); setFichaAlumnoId(null);
       return;
