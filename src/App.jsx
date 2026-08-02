@@ -3833,13 +3833,15 @@ function CalendarioAsistencia({ fechaInicial, diasCurso, diasClaseConfig, onSele
 }
 
 function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlternarCelda, onAlternarTodosPresentes, onSetMotivo, onSetDiasClase, onCerrar, tourVisto, onMarcarTourVisto }) {
-  const [fecha, setFecha] = useState(hoyISO());
+  const [fecha, setFecha] = useState(() => leerUltimoLugar("asistenciaFecha") || hoyISO());
   const [motivoAbierto, setMotivoAbierto] = useState(false);
   const [borradorMotivo, setBorradorMotivo] = useState("");
   const [pendienteCelda, setPendienteCelda] = useState(null); // { alumnoId }
   const [autorizadoEdicionPasada, setAutorizadoEdicionPasada] = useState(false);
   const [confirmarSobrescribir, setConfirmarSobrescribir] = useState(false);
-  const [calendarioAbierto, setCalendarioAbierto] = useState(false);
+  const [calendarioAbierto, setCalendarioAbierto] = useState(() => !!leerUltimoLugar("asistenciaCalendarioAbierto"));
+  useEffect(() => { guardarUltimoLugar("asistenciaFecha", fecha); }, [fecha]);
+  useEffect(() => { guardarUltimoLugar("asistenciaCalendarioAbierto", calendarioAbierto); }, [calendarioAbierto]);
   const [tourActivo, setTourActivo] = useState(!tourVisto);
   const refFecha = useRef(null);
   const refMotivo = useRef(null);
@@ -5437,7 +5439,8 @@ function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno
   const [masivaAbierta, setMasivaAbierta] = useState(false);
   const [planillaAbierta, setPlanillaAbierta] = useState(false);
   const [recuperatorioAbierto, setRecuperatorioAbierto] = useState(null); // null | "diciembre" | "febrero"
-  const [asistenciaAbierta, setAsistenciaAbierta] = useState(false);
+  const [asistenciaAbierta, setAsistenciaAbierta] = useState(() => !!leerUltimoLugar("asistenciaAbierta"));
+  useEffect(() => { guardarUltimoLugar("asistenciaAbierta", asistenciaAbierta); }, [asistenciaAbierta]);
   const [informesAbierto, setInformesAbierto] = useState(false);
   const [menuRecuperatoriosAbierto, setMenuRecuperatoriosAbierto] = useState(false);
   const [editarNotaAprobacionAbierto, setEditarNotaAprobacionAbierto] = useState(false);
