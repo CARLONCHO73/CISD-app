@@ -1835,6 +1835,7 @@ function SeccionCriterios({ curso, criterios, ordenPorCurso, onReordenar, onAgre
               onReordenar={(nuevoOrden) => setPendienteOrden(nuevoOrden)}
               renderItem={(id) => {
                 const c = mapaCriterios.get(id);
+                if (!c) return null;
                 return (
                   <FilaCriterio criterio={c} activo
                     onQuitar={() => onQuitar(c.id)}
@@ -2756,6 +2757,7 @@ function ModalHistorial({ alumno, criterios, cursoId, ordenPorCurso, onReordenar
             onReordenar={(nuevoOrden) => setPendienteOrden(nuevoOrden)}
             renderItem={(id) => {
               const t = mapaTarjetas.get(id);
+              if (!t) return null;
               const color = coloresPorCriterio[id];
               return (
                 <div style={{ background: color.fondo, border: `1px solid ${color.borde}`, borderRadius: 12, padding: "9px 10px", marginBottom: 8 }}>
@@ -2837,6 +2839,7 @@ function PantallaFichaAlumno({ colegio, curso, alumno, periodo, criteriosActivos
             onReordenar={(nuevoOrden) => setPendienteOrden(nuevoOrden)}
             renderItem={(id) => {
               const c = mapaCriterios.get(id);
+              if (!c) return null;
               const color = coloresPorCriterio[id];
               return (
                 <div style={{ marginBottom: 16, background: color.fondo, border: `1px solid ${color.borde}`, borderRadius: 14, padding: "12px 12px 14px 12px" }}>
