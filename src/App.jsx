@@ -56,8 +56,9 @@ const DIAS_SEMANA = [
   { code: "SA", label: "Sáb" },
 ];
 // Recuerda, en este dispositivo, el "último lugar" donde quedó el
-// docente. Esta vez lo vamos a sumar de a un paso, probando cada uno con
-// la consola abierta antes de seguir con el siguiente.
+// docente (colegio, curso, ficha de alumno). Se valida contra los datos
+// reales apenas cargan, para descartar en silencio cualquier referencia
+// que ya no exista.
 function leerUltimoLugar(clave) {
   try {
     const valor = localStorage.getItem("cisd-ultimo-" + clave);
@@ -5918,25 +5919,36 @@ function CISDNavegacion() {
   // docente no lo activó en el 1°). { curId, campo } o null.
   const [preguntaPromedio, setPreguntaPromedio] = useState(null);
   const [colegioId, setColegioId] = useState(() => leerUltimoLugar("colegioId"));
-  const [cursoId, setCursoId] = useState(null);
-  const [fichaAlumnoId, setFichaAlumnoId] = useState(null);
+  const [cursoId, setCursoId] = useState(() => leerUltimoLugar("cursoId"));
+  const [fichaAlumnoId, setFichaAlumnoId] = useState(() => leerUltimoLugar("fichaAlumnoId"));
   const [cargado, setCargado] = useState(false);
   const [errorCargaSesion, setErrorCargaSesion] = useState(false);
   const [toast, setToast] = useState({ show: false, text: "" });
   const toastTimer = useRef(null);
   const refAyudaColegios = useRef(null);
 
-  // Guarda el colegio en el que está el docente, para poder volver ahí
-  // si la app se recarga sola. Por ahora, solo esto (colegio), como
-  // primer paso a probar antes de sumar más.
+  // Guarda el "último lugar" (colegio, curso, ficha) para poder volver
+  // ahí si la app se recarga sola.
   useEffect(() => { guardarUltimoLugar("colegioId", colegioId); }, [colegioId]);
+  useEffect(() => { guardarUltimoLugar("cursoId", cursoId); }, [cursoId]);
+  useEffect(() => { guardarUltimoLugar("fichaAlumnoId", fichaAlumnoId); }, [fichaAlumnoId]);
 
-  // Una vez que los datos reales ya cargaron: si el colegio restaurado
-  // ya no existe, lo descartamos en silencio.
+  // Una vez que los datos reales ya cargaron: si algo restaurado ya no
+  // existe (se borró, o el dato no correspondía), lo descartamos en
+  // silencio en vez de dejar la app en un estado inconsistente.
   useEffect(() => {
     if (!cargado) return;
     if (colegioId && !colegios.some((c) => c.id === colegioId)) {
-      setColegioId(null);
+      setColegioId(null); setCursoId(null); setFichaAlumnoId(null);
+      return;
+    }
+    if (cursoId && !cursos.some((c) => c.id === cursoId)) {
+      setCursoId(null); setFichaAlumnoId(null);
+      return;
+    }
+    if (fichaAlumnoId && cursoId) {
+      const listaAlumnos = alumnosPorCurso[cursoId] || [];
+      if (!listaAlumnos.some((a) => a.id === fichaAlumnoId)) setFichaAlumnoId(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cargado]);
