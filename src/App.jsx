@@ -55,6 +55,29 @@ const DIAS_SEMANA = [
   { code: "VI", label: "Vie" },
   { code: "SA", label: "Sáb" },
 ];
+// Recuerda, en este dispositivo, el "último lugar" donde quedó el
+// docente. Esta vez lo vamos a sumar de a un paso, probando cada uno con
+// la consola abierta antes de seguir con el siguiente.
+function leerUltimoLugar(clave) {
+  try {
+    const valor = localStorage.getItem("cisd-ultimo-" + clave);
+    return valor === null ? null : JSON.parse(valor);
+  } catch {
+    return null;
+  }
+}
+function guardarUltimoLugar(clave, valor) {
+  try {
+    if (valor === null || valor === undefined || valor === false) {
+      localStorage.removeItem("cisd-ultimo-" + clave);
+    } else {
+      localStorage.setItem("cisd-ultimo-" + clave, JSON.stringify(valor));
+    }
+  } catch {
+    // Si el dispositivo no permite guardar (modo privado, etc.), no pasa nada grave.
+  }
+}
+
 function hoyISO() {
   const d = new Date();
   const yyyy = d.getFullYear();
@@ -265,9 +288,10 @@ function ordenarCriteriosPorCurso(items, cursoId, ordenPorCurso) {
 }
 
 function etiquetaTipoCriterio(c) {
+  const extra = c.conObservacion ? " + texto libre" : "";
   if (c.tipo === "numerico_instancias") return `Numérica (0–${c.max || 10}) · instancias + recuperatorio`;
-  if (c.tipo === "numerico") return `Numérica (0–${c.max || 10})`;
-  if (c.tipo === "opcion") return `Opciones: ${(c.opciones || []).join(", ")}`;
+  if (c.tipo === "numerico") return `Numérica (0–${c.max || 10})${extra}`;
+  if (c.tipo === "opcion") return `Opciones: ${(c.opciones || []).join(", ")}${extra}`;
   if (c.tipo === "asistencia") return "Asistencia · se carga desde el botón Asistencia del curso";
   return "Texto libre";
 }
@@ -1262,7 +1286,7 @@ const TIPOS_CRITERIO = [
   ["texto", "Bloque de texto"],
 ];
 
-function CamposCriterio({ nombre, setNombre, tipo, setTipo, opcionesTexto, setOpcionesTexto, maxNum, setMaxNum }) {
+function CamposCriterio({ nombre, setNombre, tipo, setTipo, opcionesTexto, setOpcionesTexto, maxNum, setMaxNum, conObservacion, setConObservacion }) {
   return (
     <>
       <input
@@ -1283,15 +1307,28 @@ function CamposCriterio({ nombre, setNombre, tipo, setTipo, opcionesTexto, setOp
         />
       )}
       {(tipo === "numerico" || tipo === "numerico_instancias") && (
-        <input value={maxNum} onChange={(e) => setMaxNum(e.target.value)} placeholder="Nota máxima (ej: 10)"
-          style={{ width: 100, boxSizing: "border-box", border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: "7px 9px", fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, marginTop: 8 }}
-        />
+        <>
+          <input value={maxNum} onChange={(e) => setMaxNum(e.target.value)} placeholder="Nota máxima (ej: 10)"
+            style={{ width: 100, boxSizing: "border-box", border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: "7px 9px", fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, marginTop: 8 }}
+          />
+          <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 10.5, color: COLORS.inkSoft, marginTop: 3 }}>
+            Nota máxima de este criterio — la podés cambiar.
+          </div>
+        </>
+      )}
+      {(tipo === "opcion" || tipo === "numerico") && setConObservacion && (
+        <label style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10, cursor: "pointer" }}>
+          <input type="checkbox" checked={!!conObservacion} onChange={(e) => setConObservacion(e.target.checked)} style={{ width: 15, height: 15, cursor: "pointer" }} />
+          <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: COLORS.ink }}>
+            + Agregar también un campo de texto libre
+          </span>
+        </label>
       )}
     </>
   );
 }
 
-function armarCampoDesdeForm(base, nombre, tipo, opcionesTexto, maxNum) {
+function armarCampoDesdeForm(base, nombre, tipo, opcionesTexto, maxNum, conObservacion) {
   const campo = { ...base, nombre: nombre.trim(), tipo };
   delete campo.opciones;
   delete campo.max;
@@ -1302,6 +1339,11 @@ function armarCampoDesdeForm(base, nombre, tipo, opcionesTexto, maxNum) {
     const m = Number(maxNum);
     campo.max = Number.isFinite(m) && m > 0 ? m : 10;
   }
+  if (tipo === "opcion" || tipo === "numerico") {
+    campo.conObservacion = !!conObservacion;
+  } else {
+    delete campo.conObservacion;
+  }
   return campo;
 }
 
@@ -1310,11 +1352,12 @@ function AgregarCriterioForm({ onCrear, onCancelar }) {
   const [tipo, setTipo] = useState(null);
   const [opcionesTexto, setOpcionesTexto] = useState("");
   const [maxNum, setMaxNum] = useState("10");
+  const [conObservacion, setConObservacion] = useState(false);
 
   function crear() {
     if (!nombre.trim() || !tipo) return;
     if (tipo === "opcion" && opcionesTexto.split(",").map((s) => s.trim()).filter(Boolean).length < 2) return;
-    onCrear(armarCampoDesdeForm({ id: nuevoId("crit"), activadoEnCursos: [], porDefecto: false }, nombre, tipo, opcionesTexto, maxNum));
+    onCrear(armarCampoDesdeForm({ id: nuevoId("crit"), activadoEnCursos: [], porDefecto: false }, nombre, tipo, opcionesTexto, maxNum, conObservacion));
   }
 
   return (
@@ -1322,7 +1365,7 @@ function AgregarCriterioForm({ onCrear, onCancelar }) {
       <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 700, color: COLORS.pine, marginBottom: 6 }}>
         Nuevo criterio
       </div>
-      <CamposCriterio nombre={nombre} setNombre={setNombre} tipo={tipo} setTipo={setTipo} opcionesTexto={opcionesTexto} setOpcionesTexto={setOpcionesTexto} maxNum={maxNum} setMaxNum={setMaxNum} />
+      <CamposCriterio nombre={nombre} setNombre={setNombre} tipo={tipo} setTipo={setTipo} opcionesTexto={opcionesTexto} setOpcionesTexto={setOpcionesTexto} maxNum={maxNum} setMaxNum={setMaxNum} conObservacion={conObservacion} setConObservacion={setConObservacion} />
       <div style={{ display: "flex", gap: 6, marginTop: 10 }}>
         <button onClick={crear} style={{ padding: "7px 14px", borderRadius: 999, border: "none", background: COLORS.pine, color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 500, cursor: "pointer" }}>Crear</button>
         <button onClick={onCancelar} style={{ padding: "7px 14px", borderRadius: 999, border: `1px solid ${COLORS.line}`, background: COLORS.white, color: COLORS.inkSoft, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 500, cursor: "pointer" }}>Cancelar</button>
@@ -1336,13 +1379,14 @@ function EditarCriterioForm({ criterio, onGuardar, onCancelar }) {
   const [tipo, setTipo] = useState(criterio.tipo === "numerico_instancias" ? "numerico_instancias" : criterio.tipo);
   const [opcionesTexto, setOpcionesTexto] = useState((criterio.opciones || []).join(", "));
   const [maxNum, setMaxNum] = useState(String(criterio.max || 10));
+  const [conObservacion, setConObservacion] = useState(!!criterio.conObservacion);
 
   function guardar() {
     if (!nombre.trim()) return;
     if (criterio.tipo === "asistencia") { onGuardar({ ...criterio, nombre: nombre.trim() }); return; }
     if (!tipo) return;
     if (tipo === "opcion" && opcionesTexto.split(",").map((s) => s.trim()).filter(Boolean).length < 2) return;
-    onGuardar(armarCampoDesdeForm(criterio, nombre, tipo, opcionesTexto, maxNum));
+    onGuardar(armarCampoDesdeForm(criterio, nombre, tipo, opcionesTexto, maxNum, conObservacion));
   }
 
   const tiposDisponibles = criterio.tipo === "numerico_instancias"
@@ -1378,9 +1422,22 @@ function EditarCriterioForm({ criterio, onGuardar, onCancelar }) {
             />
           )}
           {(tipo === "numerico" || tipo === "numerico_instancias") && (
-            <input value={maxNum} onChange={(e) => setMaxNum(e.target.value)} placeholder="Nota máxima (ej: 10)"
-              style={{ width: 100, boxSizing: "border-box", border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: "7px 9px", fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, marginTop: 8 }}
-            />
+            <>
+              <input value={maxNum} onChange={(e) => setMaxNum(e.target.value)} placeholder="Nota máxima (ej: 10)"
+                style={{ width: 100, boxSizing: "border-box", border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: "7px 9px", fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, marginTop: 8 }}
+              />
+              <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 10.5, color: COLORS.inkSoft, marginTop: 3 }}>
+                Nota máxima de este criterio — la podés cambiar.
+              </div>
+            </>
+          )}
+          {(tipo === "opcion" || tipo === "numerico") && (
+            <label style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10, cursor: "pointer" }}>
+              <input type="checkbox" checked={conObservacion} onChange={(e) => setConObservacion(e.target.checked)} style={{ width: 15, height: 15, cursor: "pointer" }} />
+              <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: COLORS.ink }}>
+                + Agregar también un campo de texto libre
+              </span>
+            </label>
           )}
         </>
       )}
@@ -2440,6 +2497,11 @@ function CampoCriterio({ alumno, criterio, periodo, instancias, notaAprobacion, 
     return (
       <>
         <CampoNumerico max={criterio.max || 10} valorActual={ultimoValorSimple(alumno, criterio.id, periodo)} notaAprobacion={notaAprobacion} onGuardar={(v) => onGuardarEvento(criterio.id, v)} />
+        {criterio.conObservacion && (
+          <div style={{ marginTop: 8 }}>
+            <CampoTexto placeholder={`Observación sobre ${criterio.nombre.toLowerCase()}…`} onGuardar={(v) => onGuardarEvento(criterio.id, v)} />
+          </div>
+        )}
         <MiniHistorial eventos={eventosDeCriterio(alumno, criterio.id, periodo)} onBorrar={onBorrarEvento} notaAprobacion={notaAprobacion} />
       </>
     );
@@ -5669,7 +5731,7 @@ function CISDNavegacion() {
   // cuatrimestre en un curso (y se repite en el 2º cuatrimestre si el
   // docente no lo activó en el 1°). { curId, campo } o null.
   const [preguntaPromedio, setPreguntaPromedio] = useState(null);
-  const [colegioId, setColegioId] = useState(null);
+  const [colegioId, setColegioId] = useState(() => leerUltimoLugar("colegioId"));
   const [cursoId, setCursoId] = useState(null);
   const [fichaAlumnoId, setFichaAlumnoId] = useState(null);
   const [cargado, setCargado] = useState(false);
@@ -5677,6 +5739,21 @@ function CISDNavegacion() {
   const [toast, setToast] = useState({ show: false, text: "" });
   const toastTimer = useRef(null);
   const refAyudaColegios = useRef(null);
+
+  // Guarda el colegio en el que está el docente, para poder volver ahí
+  // si la app se recarga sola. Por ahora, solo esto (colegio), como
+  // primer paso a probar antes de sumar más.
+  useEffect(() => { guardarUltimoLugar("colegioId", colegioId); }, [colegioId]);
+
+  // Una vez que los datos reales ya cargaron: si el colegio restaurado
+  // ya no existe, lo descartamos en silencio.
+  useEffect(() => {
+    if (!cargado) return;
+    if (colegioId && !colegios.some((c) => c.id === colegioId)) {
+      setColegioId(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cargado]);
 
   // Nombre elegido por el docente (ej. "Profe Luis") y registro de qué
   // franjas horarias (mañana/tarde/noche) ya se saludaron hoy, para no
