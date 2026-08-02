@@ -2276,11 +2276,13 @@ function CampoTexto({ onGuardar, placeholder }) {
   );
 }
 
-function FilaHistorial({ ev, etiqueta, revelado, onLongPress, onBorrar, notaAprobacion, permiteRecuperatorio, onAgregarRecuperatorio, maxRecuperatorio }) {
+function FilaHistorial({ ev, etiqueta, revelado, onLongPress, onBorrar, onEditar, notaAprobacion, permiteRecuperatorio, onAgregarRecuperatorio, maxRecuperatorio }) {
   const timerRef = useRef(null);
   const [confirmando, setConfirmando] = useState(false);
   const [modoRecup, setModoRecup] = useState(false);
-  useEffect(() => { if (!revelado) { setConfirmando(false); setModoRecup(false); } }, [revelado]);
+  const [editando, setEditando] = useState(false);
+  const [borrador, setBorrador] = useState(ev.valor);
+  useEffect(() => { if (!revelado) { setConfirmando(false); setModoRecup(false); setEditando(false); } }, [revelado]);
 
   function empezar() { timerRef.current = setTimeout(() => onLongPress(ev.id), 480); }
   function cancelar() { clearTimeout(timerRef.current); }
@@ -2296,6 +2298,29 @@ function FilaHistorial({ ev, etiqueta, revelado, onLongPress, onBorrar, notaApro
           onGuardar={(v) => { onAgregarRecuperatorio(ev.id, v); setModoRecup(false); }}
         />
         <span onClick={() => setModoRecup(false)} style={{ ...chipBase, marginTop: 6, color: COLORS.inkSoft, background: COLORS.paperDim }}>Cancelar</span>
+      </div>
+    );
+  }
+
+  if (editando) {
+    return (
+      <div style={{ padding: "8px 6px", background: "#FBF3E4", borderRadius: 8, marginBottom: 2 }}>
+        <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, color: COLORS.inkSoft, marginBottom: 6 }}>
+          Corregir {etiqueta ? etiqueta.toLowerCase() : "este registro"}
+        </div>
+        <textarea
+          value={borrador} onChange={(e) => setBorrador(e.target.value)} autoFocus rows={2}
+          style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: "6px 8px", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, resize: "vertical", marginBottom: 6 }}
+        />
+        <div style={{ display: "flex", gap: 6 }}>
+          <span
+            onClick={() => { if (borrador.trim()) { onEditar(ev.id, borrador.trim()); setEditando(false); } }}
+            style={{ ...chipBase, color: COLORS.white, background: COLORS.pine }}
+          >
+            Guardar
+          </span>
+          <span onClick={() => { setBorrador(ev.valor); setEditando(false); }} style={{ ...chipBase, color: COLORS.inkSoft, background: COLORS.paperDim }}>Cancelar</span>
+        </div>
       </div>
     );
   }
@@ -2326,6 +2351,9 @@ function FilaHistorial({ ev, etiqueta, revelado, onLongPress, onBorrar, notaApro
                 {ev.recuperatorio ? "Editar recup." : "Agregar Recuperatorio"}
               </span>
             )}
+            {onEditar && (
+              <span onClick={(e) => { e.stopPropagation(); setBorrador(ev.valor); setEditando(true); }} style={{ ...chipBase, fontSize: 11, color: COLORS.white, background: COLORS.pine }}>Editar</span>
+            )}
             <span onClick={(e) => { e.stopPropagation(); setConfirmando(true); }} style={{ ...chipBase, fontSize: 11, color: COLORS.white, background: COLORS.rose }}>Borrar</span>
           </span>
         )
@@ -2336,7 +2364,7 @@ function FilaHistorial({ ev, etiqueta, revelado, onLongPress, onBorrar, notaApro
   );
 }
 
-function MiniHistorial({ eventos, onBorrar, etiquetaPorEvento, notaAprobacion, permiteRecuperatorio, onAgregarRecuperatorio, maxRecuperatorio }) {
+function MiniHistorial({ eventos, onBorrar, onEditar, etiquetaPorEvento, notaAprobacion, permiteRecuperatorio, onAgregarRecuperatorio, maxRecuperatorio }) {
   const [revelado, setRevelado] = useState(null);
   if (!eventos || eventos.length === 0) return null;
   return (
@@ -2345,6 +2373,7 @@ function MiniHistorial({ eventos, onBorrar, etiquetaPorEvento, notaAprobacion, p
         <FilaHistorial key={ev.id} ev={ev} etiqueta={etiquetaPorEvento ? etiquetaPorEvento(ev) : null}
           revelado={revelado === ev.id} onLongPress={setRevelado}
           onBorrar={(id) => { onBorrar(id); setRevelado(null); }}
+          onEditar={onEditar ? (id, valor) => { onEditar(id, valor); setRevelado(null); } : null}
           notaAprobacion={notaAprobacion}
           permiteRecuperatorio={permiteRecuperatorio}
           onAgregarRecuperatorio={onAgregarRecuperatorio}
@@ -2469,7 +2498,7 @@ function CampoAsistenciaResumen({ alumno, diasCurso, compacto }) {
   );
 }
 
-function CampoCriterio({ alumno, criterio, periodo, instancias, notaAprobacion, diasCurso, onGuardarEvento, onGuardarNotaInstancia, onAgregarInstancia, onBorrarEvento, onSetRecuperatorio }) {
+function CampoCriterio({ alumno, criterio, periodo, instancias, notaAprobacion, diasCurso, onGuardarEvento, onGuardarNotaInstancia, onAgregarInstancia, onBorrarEvento, onEditarEvento, onSetRecuperatorio }) {
   if (criterio.tipo === "asistencia") {
     return <CampoAsistenciaResumen alumno={alumno} diasCurso={diasCurso} />;
   }
@@ -2482,7 +2511,7 @@ function CampoCriterio({ alumno, criterio, periodo, instancias, notaAprobacion, 
             <CampoTexto placeholder={`Observación sobre ${criterio.nombre.toLowerCase()}…`} onGuardar={(v) => onGuardarEvento(criterio.id, v)} />
           </div>
         )}
-        <MiniHistorial eventos={eventosDeCriterio(alumno, criterio.id, periodo)} onBorrar={onBorrarEvento} notaAprobacion={notaAprobacion} />
+        <MiniHistorial eventos={eventosDeCriterio(alumno, criterio.id, periodo)} onBorrar={onBorrarEvento} onEditar={onEditarEvento} notaAprobacion={notaAprobacion} />
       </>
     );
   }
@@ -2490,7 +2519,7 @@ function CampoCriterio({ alumno, criterio, periodo, instancias, notaAprobacion, 
     return (
       <>
         <CampoTexto onGuardar={(v) => onGuardarEvento(criterio.id, v)} />
-        <MiniHistorial eventos={eventosDeCriterio(alumno, criterio.id, periodo)} onBorrar={onBorrarEvento} notaAprobacion={notaAprobacion} />
+        <MiniHistorial eventos={eventosDeCriterio(alumno, criterio.id, periodo)} onBorrar={onBorrarEvento} onEditar={onEditarEvento} notaAprobacion={notaAprobacion} />
       </>
     );
   }
@@ -2503,7 +2532,7 @@ function CampoCriterio({ alumno, criterio, periodo, instancias, notaAprobacion, 
             <CampoTexto placeholder={`Observación sobre ${criterio.nombre.toLowerCase()}…`} onGuardar={(v) => onGuardarEvento(criterio.id, v)} />
           </div>
         )}
-        <MiniHistorial eventos={eventosDeCriterio(alumno, criterio.id, periodo)} onBorrar={onBorrarEvento} notaAprobacion={notaAprobacion} />
+        <MiniHistorial eventos={eventosDeCriterio(alumno, criterio.id, periodo)} onBorrar={onBorrarEvento} onEditar={onEditarEvento} notaAprobacion={notaAprobacion} />
       </>
     );
   }
@@ -2672,8 +2701,32 @@ function TablaNotasOficiales({ notas, notaAprobacion, onCambiar, columnas = COLU
   );
 }
 
-function FilaHistorialCompacta({ ev, onBorrar, notaAprobacion }) {
+function FilaHistorialCompacta({ ev, onBorrar, onEditar, notaAprobacion }) {
   const [confirmando, setConfirmando] = useState(false);
+  const [editando, setEditando] = useState(false);
+  const [borrador, setBorrador] = useState(ev.valor);
+
+  if (editando) {
+    return (
+      <div style={{ padding: "6px 4px", background: "#FBF3E4", borderRadius: 8, marginBottom: 2 }}>
+        {ev.etiqueta && <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 10.5, fontWeight: 700, color: COLORS.inkSoft, marginBottom: 4 }}>{ev.etiqueta}</div>}
+        <textarea
+          value={borrador} onChange={(e) => setBorrador(e.target.value)} autoFocus rows={2}
+          style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: "5px 7px", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, resize: "vertical", marginBottom: 5 }}
+        />
+        <div style={{ display: "flex", gap: 5 }}>
+          <span
+            onClick={() => { if (borrador.trim()) { onEditar(ev.id, borrador.trim()); setEditando(false); } }}
+            style={{ ...chipBase, fontSize: 10, padding: "2px 7px", color: COLORS.white, background: COLORS.pine }}
+          >
+            Guardar
+          </span>
+          <span onClick={() => { setBorrador(ev.valor); setEditando(false); }} style={{ ...chipBase, fontSize: 10, padding: "2px 7px", color: COLORS.inkSoft, background: COLORS.paperDim }}>Cancelar</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "3px 2px", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: COLORS.ink }}>
       <span style={{ maxWidth: "62%" }}>
@@ -2686,8 +2739,15 @@ function FilaHistorialCompacta({ ev, onBorrar, notaAprobacion }) {
           <span onClick={() => setConfirmando(false)} style={{ ...chipBase, fontSize: 10, padding: "2px 7px", color: COLORS.inkSoft, background: COLORS.paperDim }}>Cancelar</span>
         </span>
       ) : (
-        <span onClick={() => setConfirmando(true)} style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: COLORS.inkSoft, cursor: "pointer" }}>
-          {fechaCorta(ev.fecha)} · borrar
+        <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          {onEditar && (
+            <span onClick={() => { setBorrador(ev.valor); setEditando(true); }} style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 10, fontWeight: 600, color: COLORS.pine, cursor: "pointer" }}>
+              editar
+            </span>
+          )}
+          <span onClick={() => setConfirmando(true)} style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10, color: COLORS.inkSoft, cursor: "pointer" }}>
+            {fechaCorta(ev.fecha)} · borrar
+          </span>
         </span>
       )}
     </div>
@@ -2697,7 +2757,7 @@ function FilaHistorialCompacta({ ev, onBorrar, notaAprobacion }) {
 // ================================================================
 // MODAL "TODOS LOS REGISTROS" (portado del Perfil del boceto original)
 // ================================================================
-function ModalHistorial({ alumno, criterios, cursoId, ordenPorCurso, onReordenarCriterios, instanciasPorCriterio, periodoInicial, notaAprobacion, onBorrar, onCambiarNotaOficial, columnas, onClose, promedioAuto, onTogglePromedioAuto }) {
+function ModalHistorial({ alumno, criterios, cursoId, ordenPorCurso, onReordenarCriterios, instanciasPorCriterio, periodoInicial, notaAprobacion, onBorrar, onEditar, onCambiarNotaOficial, columnas, onClose, promedioAuto, onTogglePromedioAuto }) {
   const [tab, setTab] = useState(periodoInicial);
   const [pendienteOrden, setPendienteOrden] = useState(null);
   const criteriosOrdenados = ordenarCriteriosPorCurso(criterios, cursoId, ordenPorCurso);
@@ -2765,7 +2825,7 @@ function ModalHistorial({ alumno, criterios, cursoId, ordenPorCurso, onReordenar
                     {t.criterio.nombre}
                   </div>
                   {t.eventos.map((ev) => (
-                    <FilaHistorialCompacta key={ev.id} ev={ev} onBorrar={onBorrar} notaAprobacion={notaAprobacion} />
+                    <FilaHistorialCompacta key={ev.id} ev={ev} onBorrar={onBorrar} onEditar={onEditar} notaAprobacion={notaAprobacion} />
                   ))}
                 </div>
               );
@@ -2779,7 +2839,7 @@ function ModalHistorial({ alumno, criterios, cursoId, ordenPorCurso, onReordenar
   );
 }
 
-function PantallaFichaAlumno({ colegio, curso, alumno, periodo, criteriosActivos, todosLosCriterios, ordenPorCurso, onReordenarCriterios, instanciasPorCriterio, notaAprobacion, diasCurso, onGuardarEvento, onGuardarNotaInstancia, onAgregarInstancia, onBorrarEvento, onSetRecuperatorio, onCambiarNotaOficial, nombresColumnasPorColegio, onVolver, tourVisto, onMarcarTourVisto, promedioAuto, onTogglePromedioAuto }) {
+function PantallaFichaAlumno({ colegio, curso, alumno, periodo, criteriosActivos, todosLosCriterios, ordenPorCurso, onReordenarCriterios, instanciasPorCriterio, notaAprobacion, diasCurso, onGuardarEvento, onGuardarNotaInstancia, onAgregarInstancia, onBorrarEvento, onEditarEvento, onSetRecuperatorio, onCambiarNotaOficial, nombresColumnasPorColegio, onVolver, tourVisto, onMarcarTourVisto, promedioAuto, onTogglePromedioAuto }) {
   const activosOrdenados = ordenarCriteriosPorCurso(criteriosActivos, curso.id, ordenPorCurso);
   const coloresPorCriterio = asignarColoresSinRepetir(activosOrdenados);
   const mapaCriterios = new Map(activosOrdenados.map((c) => [c.id, c]));
@@ -2858,6 +2918,7 @@ function PantallaFichaAlumno({ colegio, curso, alumno, periodo, criteriosActivos
                         onGuardarNotaInstancia={(criterioId, instanciaId, valor) => onGuardarNotaInstancia(alumno.id, criterioId, instanciaId, valor)}
                         onAgregarInstancia={onAgregarInstancia}
                         onBorrarEvento={(eventoId) => onBorrarEvento(alumno.id, eventoId)}
+                        onEditarEvento={(eventoId, nuevoValor) => onEditarEvento(alumno.id, eventoId, nuevoValor)}
                         onSetRecuperatorio={(eventoId, valor) => onSetRecuperatorio(alumno.id, eventoId, valor)}
                       />
                     </>
@@ -2887,6 +2948,7 @@ function PantallaFichaAlumno({ colegio, curso, alumno, periodo, criteriosActivos
           periodoInicial={periodo}
           notaAprobacion={notaAprobacion}
           onBorrar={(eventoId) => onBorrarEvento(alumno.id, eventoId)}
+          onEditar={(eventoId, nuevoValor) => onEditarEvento(alumno.id, eventoId, nuevoValor)}
           onCambiarNotaOficial={(campo, valor) => onCambiarNotaOficial(alumno.id, campo, valor)}
           columnas={columnas}
           onClose={() => setHistorialAbierto(false)}
@@ -6318,6 +6380,20 @@ function CISDNavegacion() {
     }));
   }
 
+  // Corrige el texto de un registro ya guardado, sin borrarlo y crear
+  // uno nuevo: conserva el mismo id y la misma fecha original.
+  function editarEvento(curId, alumnoId, eventoId, nuevoValor) {
+    setAlumnosPorCurso((prev) => ({
+      ...prev,
+      [curId]: (prev[curId] || []).map((a) => (
+        a.id === alumnoId
+          ? { ...a, eventos: (a.eventos || []).map((e) => (e.id === eventoId ? { ...e, valor: nuevoValor } : e)) }
+          : a
+      )),
+    }));
+    mostrarToast("Registro corregido");
+  }
+
   function agregarInstanciaEvaluacion(curId, criterioId, nombre) {
     const id = nuevoId("inst");
     setInstanciasPorCurso((prev) => {
@@ -6645,6 +6721,7 @@ function CISDNavegacion() {
             onGuardarNotaInstancia={(alumnoId, criterioId, instanciaId, valor) => guardarNotaInstancia(cursoActual.id, alumnoId, criterioId, instanciaId, valor)}
             onAgregarInstancia={(criterioId, nombre) => agregarInstanciaEvaluacion(cursoActual.id, criterioId, nombre)}
             onBorrarEvento={(alumnoId, eventoId) => borrarEvento(cursoActual.id, alumnoId, eventoId)}
+            onEditarEvento={(alumnoId, eventoId, nuevoValor) => editarEvento(cursoActual.id, alumnoId, eventoId, nuevoValor)}
             onSetRecuperatorio={(alumnoId, eventoId, valor) => setRecuperatorio(cursoActual.id, alumnoId, eventoId, valor)}
             onCambiarNotaOficial={(alumnoId, campo, valor) => actualizarNotaOficial(cursoActual.id, alumnoId, campo, valor)}
             nombresColumnasPorColegio={nombresColumnasPorColegio}
