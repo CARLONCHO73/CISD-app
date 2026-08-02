@@ -2388,12 +2388,15 @@ function MiniHistorial({ eventos, onBorrar, onEditar, etiquetaPorEvento, notaApr
 // nueva sobre una instancia ya calificada la reemplaza directamente
 // (upsert); el recuperatorio se agrega aparte, tocando la nota ya
 // registrada en el historial de abajo.
-function CampoEvaluaciones({ alumno, criterio, periodo, instancias, notaAprobacion, onGuardar, onAgregarInstancia, onBorrar, onSetRecuperatorio }) {
+function CampoEvaluaciones({ alumno, criterio, periodo, instancias, notaAprobacion, onGuardar, onAgregarInstancia, onEditarInstancia, onBorrarInstancia, onBorrar, onSetRecuperatorio }) {
   const [seleccion, setSeleccion] = useState(null);
   const [agregando, setAgregando] = useState(instancias.length === 0);
   const [nombreNuevo, setNombreNuevo] = useState("");
+  const [accion, setAccion] = useState(null); // null | "editar" | "borrar"
+  const [nombreEditado, setNombreEditado] = useState("");
 
   const eventosEval = eventosDeCriterio(alumno, criterio.id, periodo);
+  const instanciaSeleccionada = instancias.find((i) => i.id === seleccion) || null;
 
   function valorPrevio(instanciaId) {
     const ev = eventosEval.find((e) => e.instanciaId === instanciaId);
@@ -2407,6 +2410,25 @@ function CampoEvaluaciones({ alumno, criterio, periodo, instancias, notaAprobaci
     setNombreNuevo("");
     setAgregando(false);
   }
+  function tocarPestana(inst) {
+    if (seleccion === inst.id) {
+      setSeleccion(null);
+      setAccion(null);
+    } else {
+      setSeleccion(inst.id);
+      setAccion(null);
+    }
+  }
+  function confirmarBorrarInstancia() {
+    onBorrarInstancia(seleccion);
+    setSeleccion(null);
+    setAccion(null);
+  }
+  function confirmarEditarInstancia() {
+    if (!nombreEditado.trim()) return;
+    onEditarInstancia(seleccion, nombreEditado.trim());
+    setAccion(null);
+  }
 
   return (
     <div>
@@ -2415,7 +2437,7 @@ function CampoEvaluaciones({ alumno, criterio, periodo, instancias, notaAprobaci
           {instancias.map((inst) => {
             const activo = seleccion === inst.id;
             return (
-              <button key={inst.id} onClick={() => setSeleccion(activo ? null : inst.id)}
+              <button key={inst.id} onClick={() => tocarPestana(inst)}
                 style={{ padding: "5px 8px", borderRadius: 999, border: `1.5px solid ${activo ? COLORS.pine : COLORS.line}`, background: activo ? COLORS.pine : COLORS.white, color: activo ? COLORS.white : COLORS.ink, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, fontWeight: 500, whiteSpace: "nowrap", flexShrink: 0, cursor: "pointer" }}
               >{inst.nombre}</button>
             );
@@ -2423,6 +2445,46 @@ function CampoEvaluaciones({ alumno, criterio, periodo, instancias, notaAprobaci
           <button onClick={() => setAgregando((v) => !v)}
             style={{ padding: "5px 8px", borderRadius: 999, border: `1.5px dashed ${COLORS.ochre}`, background: COLORS.white, color: COLORS.ochre, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0, cursor: "pointer" }}
           >+ Nueva</button>
+        </div>
+      )}
+
+      {seleccion && !accion && (onEditarInstancia || onBorrarInstancia) && (
+        <div style={{ display: "flex", gap: 12, marginTop: 4, padding: "0 2px" }}>
+          {onEditarInstancia && (
+            <span onClick={() => { setNombreEditado(instanciaSeleccionada ? instanciaSeleccionada.nombre : ""); setAccion("editar"); }} style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, fontWeight: 600, color: COLORS.pine, cursor: "pointer" }}>
+              Editar nombre
+            </span>
+          )}
+          {onBorrarInstancia && (
+            <span onClick={() => setAccion("borrar")} style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, fontWeight: 600, color: COLORS.rose, cursor: "pointer" }}>
+              Borrar instancia
+            </span>
+          )}
+        </div>
+      )}
+
+      {accion === "editar" && (
+        <div style={{ marginTop: 6, padding: 8, background: COLORS.paperDim, borderRadius: 10 }}>
+          <input value={nombreEditado} onChange={(e) => setNombreEditado(e.target.value)} autoFocus
+            onKeyDown={(e) => { if (e.key === "Enter") confirmarEditarInstancia(); }}
+            style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: "6px 8px", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, marginBottom: 6 }}
+          />
+          <div style={{ display: "flex", gap: 6 }}>
+            <span onClick={confirmarEditarInstancia} style={{ ...chipBase, color: COLORS.white, background: COLORS.pine }}>Guardar</span>
+            <span onClick={() => setAccion(null)} style={{ ...chipBase, color: COLORS.inkSoft, background: COLORS.white }}>Cancelar</span>
+          </div>
+        </div>
+      )}
+
+      {accion === "borrar" && (
+        <div style={{ marginTop: 6, padding: 8, background: "#FBEEEC", borderRadius: 10 }}>
+          <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: COLORS.ink, marginBottom: 6 }}>
+            ¿Borrar "{instanciaSeleccionada ? instanciaSeleccionada.nombre : ""}"? Se van a borrar también las notas ya cargadas ahí para todos los alumnos del curso. No se puede deshacer.
+          </div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <span onClick={confirmarBorrarInstancia} style={{ ...chipBase, color: COLORS.white, background: COLORS.rose }}>Sí, borrar</span>
+            <span onClick={() => setAccion(null)} style={{ ...chipBase, color: COLORS.inkSoft, background: COLORS.white }}>Cancelar</span>
+          </div>
         </div>
       )}
 
@@ -2444,7 +2506,7 @@ function CampoEvaluaciones({ alumno, criterio, periodo, instancias, notaAprobaci
         </div>
       )}
 
-      {seleccion && (
+      {seleccion && !accion && (
         <div style={{ marginTop: 10 }} key={seleccion}>
           <CampoNumerico max={criterio.max || 10} valorActual={valorPrevio(seleccion)} notaAprobacion={notaAprobacion} onGuardar={(v) => onGuardar(seleccion, v)} />
         </div>
@@ -2498,7 +2560,7 @@ function CampoAsistenciaResumen({ alumno, diasCurso, compacto }) {
   );
 }
 
-function CampoCriterio({ alumno, criterio, periodo, instancias, notaAprobacion, diasCurso, onGuardarEvento, onGuardarNotaInstancia, onAgregarInstancia, onBorrarEvento, onEditarEvento, onSetRecuperatorio }) {
+function CampoCriterio({ alumno, criterio, periodo, instancias, notaAprobacion, diasCurso, onGuardarEvento, onGuardarNotaInstancia, onAgregarInstancia, onEditarInstancia, onBorrarInstancia, onBorrarEvento, onEditarEvento, onSetRecuperatorio }) {
   if (criterio.tipo === "asistencia") {
     return <CampoAsistenciaResumen alumno={alumno} diasCurso={diasCurso} />;
   }
@@ -2542,6 +2604,8 @@ function CampoCriterio({ alumno, criterio, periodo, instancias, notaAprobacion, 
       alumno={alumno} criterio={criterio} periodo={periodo} instancias={instancias || []} notaAprobacion={notaAprobacion}
       onGuardar={(instanciaId, valor) => onGuardarNotaInstancia(criterio.id, instanciaId, valor)}
       onAgregarInstancia={(nombre) => onAgregarInstancia(criterio.id, nombre)}
+      onEditarInstancia={onEditarInstancia ? (instanciaId, nombre) => onEditarInstancia(criterio.id, instanciaId, nombre) : null}
+      onBorrarInstancia={onBorrarInstancia ? (instanciaId) => onBorrarInstancia(criterio.id, instanciaId) : null}
       onBorrar={onBorrarEvento}
       onSetRecuperatorio={(eventoId, valor) => onSetRecuperatorio(eventoId, valor)}
     />
@@ -2839,7 +2903,7 @@ function ModalHistorial({ alumno, criterios, cursoId, ordenPorCurso, onReordenar
   );
 }
 
-function PantallaFichaAlumno({ colegio, curso, alumno, periodo, criteriosActivos, todosLosCriterios, ordenPorCurso, onReordenarCriterios, instanciasPorCriterio, notaAprobacion, diasCurso, onGuardarEvento, onGuardarNotaInstancia, onAgregarInstancia, onBorrarEvento, onEditarEvento, onSetRecuperatorio, onCambiarNotaOficial, nombresColumnasPorColegio, onVolver, tourVisto, onMarcarTourVisto, promedioAuto, onTogglePromedioAuto }) {
+function PantallaFichaAlumno({ colegio, curso, alumno, periodo, criteriosActivos, todosLosCriterios, ordenPorCurso, onReordenarCriterios, instanciasPorCriterio, notaAprobacion, diasCurso, onGuardarEvento, onGuardarNotaInstancia, onAgregarInstancia, onEditarInstancia, onBorrarInstancia, onBorrarEvento, onEditarEvento, onSetRecuperatorio, onCambiarNotaOficial, nombresColumnasPorColegio, onVolver, tourVisto, onMarcarTourVisto, promedioAuto, onTogglePromedioAuto }) {
   const activosOrdenados = ordenarCriteriosPorCurso(criteriosActivos, curso.id, ordenPorCurso);
   const coloresPorCriterio = asignarColoresSinRepetir(activosOrdenados);
   const mapaCriterios = new Map(activosOrdenados.map((c) => [c.id, c]));
@@ -2917,6 +2981,8 @@ function PantallaFichaAlumno({ colegio, curso, alumno, periodo, criteriosActivos
                         onGuardarEvento={(criterioId, valor, extra) => onGuardarEvento(alumno.id, criterioId, valor, extra)}
                         onGuardarNotaInstancia={(criterioId, instanciaId, valor) => onGuardarNotaInstancia(alumno.id, criterioId, instanciaId, valor)}
                         onAgregarInstancia={onAgregarInstancia}
+                        onEditarInstancia={onEditarInstancia}
+                        onBorrarInstancia={onBorrarInstancia}
                         onBorrarEvento={(eventoId) => onBorrarEvento(alumno.id, eventoId)}
                         onEditarEvento={(eventoId, nuevoValor) => onEditarEvento(alumno.id, eventoId, nuevoValor)}
                         onSetRecuperatorio={(eventoId, valor) => onSetRecuperatorio(alumno.id, eventoId, valor)}
@@ -3080,19 +3146,23 @@ function FilaCorreccionMasivaAlumno({ alumno, valorGuardado, inputRef, onGuardar
   );
 }
 
-function CorreccionMasiva({ alumnos, criteriosInstancias, periodo, instanciasPorCriterio, onGuardar, onAgregarInstancia, onCerrar }) {
+function CorreccionMasiva({ alumnos, criteriosInstancias, periodo, instanciasPorCriterio, onGuardar, onAgregarInstancia, onEditarInstancia, onBorrarInstancia, onCerrar }) {
   const [criterioId, setCriterioId] = useState(criteriosInstancias.length ? criteriosInstancias[0].id : null);
   const [instanciaId, setInstanciaId] = useState(null);
   const [agregando, setAgregando] = useState(false);
   const [nombreNuevo, setNombreNuevo] = useState("");
+  const [accion, setAccion] = useState(null); // null | "editar" | "borrar"
+  const [nombreEditado, setNombreEditado] = useState("");
   const inputsRef = useRef([]);
 
   const criterioActual = criteriosInstancias.find((c) => c.id === criterioId) || null;
   const instancias = instanciasPorCriterio[criterioId] || [];
+  const instanciaActual = instancias.find((i) => i.id === instanciaId) || null;
 
   useEffect(() => {
     setInstanciaId((instanciasPorCriterio[criterioId] || []).length ? instanciasPorCriterio[criterioId][0].id : null);
     setAgregando((instanciasPorCriterio[criterioId] || []).length === 0);
+    setAccion(null);
   }, [criterioId]);
 
   function valorActual(alumno) {
@@ -3128,6 +3198,15 @@ function CorreccionMasiva({ alumnos, criteriosInstancias, periodo, instanciasPor
     setNombreNuevo("");
     setAgregando(false);
   }
+  function confirmarBorrarInstancia() {
+    onBorrarInstancia(criterioId, instanciaId);
+    setAccion(null);
+  }
+  function confirmarEditarInstancia() {
+    if (!nombreEditado.trim()) return;
+    onEditarInstancia(criterioId, instanciaId, nombreEditado.trim());
+    setAccion(null);
+  }
 
   if (!criterioActual) return null;
 
@@ -3158,13 +3237,53 @@ function CorreccionMasiva({ alumnos, criteriosInstancias, periodo, instanciasPor
       {instancias.length > 0 && (
         <div style={{ padding: "12px 16px", display: "flex", flexWrap: "nowrap", overflowX: "auto", gap: 6, borderBottom: `1px solid ${COLORS.line}` }}>
           {instancias.map((inst) => (
-            <button key={inst.id} onClick={() => setInstanciaId(inst.id)}
+            <button key={inst.id} onClick={() => { setInstanciaId(inst.id); setAccion(null); }}
               style={{ padding: "6px 12px", borderRadius: 999, border: `1.5px solid ${instanciaId === inst.id ? COLORS.pine : COLORS.line}`, background: instanciaId === inst.id ? COLORS.pine : COLORS.white, color: instanciaId === inst.id ? COLORS.white : COLORS.ink, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 500, whiteSpace: "nowrap", flexShrink: 0, cursor: "pointer" }}
             >{inst.nombre}</button>
           ))}
           <button onClick={() => setAgregando((v) => !v)}
             style={{ padding: "6px 12px", borderRadius: 999, border: `1.5px dashed ${COLORS.ochre}`, background: COLORS.white, color: COLORS.ochre, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", flexShrink: 0, cursor: "pointer" }}
           >+ Nueva</button>
+        </div>
+      )}
+
+      {instanciaId && !accion && (onEditarInstancia || onBorrarInstancia) && (
+        <div style={{ display: "flex", gap: 14, padding: "8px 16px 0 16px" }}>
+          {onEditarInstancia && (
+            <span onClick={() => { setNombreEditado(instanciaActual ? instanciaActual.nombre : ""); setAccion("editar"); }} style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 600, color: COLORS.pine, cursor: "pointer" }}>
+              Editar nombre
+            </span>
+          )}
+          {onBorrarInstancia && (
+            <span onClick={() => setAccion("borrar")} style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 600, color: COLORS.rose, cursor: "pointer" }}>
+              Borrar instancia
+            </span>
+          )}
+        </div>
+      )}
+
+      {accion === "editar" && (
+        <div style={{ margin: "8px 16px 0 16px", padding: 8, background: COLORS.paperDim, borderRadius: 10 }}>
+          <input value={nombreEditado} onChange={(e) => setNombreEditado(e.target.value)} autoFocus
+            onKeyDown={(e) => { if (e.key === "Enter") confirmarEditarInstancia(); }}
+            style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: "6px 8px", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, marginBottom: 6 }}
+          />
+          <div style={{ display: "flex", gap: 6 }}>
+            <span onClick={confirmarEditarInstancia} style={{ ...chipBase, color: COLORS.white, background: COLORS.pine }}>Guardar</span>
+            <span onClick={() => setAccion(null)} style={{ ...chipBase, color: COLORS.inkSoft, background: COLORS.white }}>Cancelar</span>
+          </div>
+        </div>
+      )}
+
+      {accion === "borrar" && (
+        <div style={{ margin: "8px 16px 0 16px", padding: 8, background: "#FBEEEC", borderRadius: 10 }}>
+          <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: COLORS.ink, marginBottom: 6 }}>
+            ¿Borrar "{instanciaActual ? instanciaActual.nombre : ""}"? Se van a borrar también las notas ya cargadas ahí para todos los alumnos. No se puede deshacer.
+          </div>
+          <div style={{ display: "flex", gap: 6 }}>
+            <span onClick={confirmarBorrarInstancia} style={{ ...chipBase, color: COLORS.white, background: COLORS.rose }}>Sí, borrar</span>
+            <span onClick={() => setAccion(null)} style={{ ...chipBase, color: COLORS.inkSoft, background: COLORS.white }}>Cancelar</span>
+          </div>
         </div>
       )}
 
@@ -5312,7 +5431,7 @@ function PantallaHorarioDocente({ colegios, cursosPorColegio, diasClasePorCurso,
   );
 }
 
-function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno, onEditarAlumno, onAbrirFicha, onVolver, criterios, ordenPorCurso, onReordenarCriterios, onAgregarCriterio, onUsarCriterio, onUsarCriterioEnTodos, onQuitarCriterio, onEditarCriterio, onEliminarCriterioDefinitivo, periodo, onCambiarPeriodo, instanciasPorCriterio, onGuardarMasivo, onAgregarInstancia, notaAprobacion, onCambiarNotaAprobacion, onCambiarNotaOficial, onCambiarNotaRecuperatorio, nombresColumnasPorColegio, onRenombrarColumnaNota, diasCurso, diasClaseConfig, onAlternarCeldaAsistencia, onAlternarTodosPresentes, onSetMotivoNoTrabajado, onSetDiasClase, tourVisto, onMarcarTourVisto, tourVistoPorPantalla, onMarcarTourVistoPantalla, promedioAuto, onTogglePromedioAuto }) {
+function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno, onEditarAlumno, onAbrirFicha, onVolver, criterios, ordenPorCurso, onReordenarCriterios, onAgregarCriterio, onUsarCriterio, onUsarCriterioEnTodos, onQuitarCriterio, onEditarCriterio, onEliminarCriterioDefinitivo, periodo, onCambiarPeriodo, instanciasPorCriterio, onGuardarMasivo, onAgregarInstancia, onEditarInstancia, onBorrarInstancia, notaAprobacion, onCambiarNotaAprobacion, onCambiarNotaOficial, onCambiarNotaRecuperatorio, nombresColumnasPorColegio, onRenombrarColumnaNota, diasCurso, diasClaseConfig, onAlternarCeldaAsistencia, onAlternarTodosPresentes, onSetMotivoNoTrabajado, onSetDiasClase, tourVisto, onMarcarTourVisto, tourVistoPorPantalla, onMarcarTourVistoPantalla, promedioAuto, onTogglePromedioAuto }) {
   const [busqueda, setBusqueda] = useState("");
   const [masivaAbierta, setMasivaAbierta] = useState(false);
   const [planillaAbierta, setPlanillaAbierta] = useState(false);
@@ -5467,6 +5586,8 @@ function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno
           instanciasPorCriterio={instanciasPorCriterio}
           onGuardar={onGuardarMasivo}
           onAgregarInstancia={onAgregarInstancia}
+          onEditarInstancia={onEditarInstancia}
+          onBorrarInstancia={onBorrarInstancia}
           onCerrar={() => setMasivaAbierta(false)}
         />
       )}
@@ -6404,6 +6525,38 @@ function CISDNavegacion() {
     return id;
   }
 
+  function editarInstanciaEvaluacion(curId, criterioId, instanciaId, nuevoNombre) {
+    setInstanciasPorCurso((prev) => {
+      const delCurso = prev[curId] || {};
+      const delCriterio = delCurso[criterioId] || [];
+      return {
+        ...prev,
+        [curId]: { ...delCurso, [criterioId]: delCriterio.map((i) => (i.id === instanciaId ? { ...i, nombre: nuevoNombre } : i)) },
+      };
+    });
+    mostrarToast("Nombre actualizado");
+  }
+
+  // Borra una instancia de evaluación (ej: "TPD") por completo, incluidas
+  // las notas que ya se hubieran cargado ahí para cualquier alumno del
+  // curso — es una pestaña compartida por todo el curso, no de un solo
+  // alumno.
+  function borrarInstanciaEvaluacion(curId, criterioId, instanciaId) {
+    setInstanciasPorCurso((prev) => {
+      const delCurso = prev[curId] || {};
+      const delCriterio = delCurso[criterioId] || [];
+      return { ...prev, [curId]: { ...delCurso, [criterioId]: delCriterio.filter((i) => i.id !== instanciaId) } };
+    });
+    setAlumnosPorCurso((prev) => ({
+      ...prev,
+      [curId]: (prev[curId] || []).map((a) => ({
+        ...a,
+        eventos: (a.eventos || []).filter((e) => !(e.criterioId === criterioId && e.instanciaId === instanciaId)),
+      })),
+    }));
+    mostrarToast("Instancia eliminada");
+  }
+
   function agregarCriterio(campo) {
     setCriterios((prev) => {
       const maxOrden = prev.reduce((m, c) => Math.max(m, c.orden || 0), -1);
@@ -6683,6 +6836,8 @@ function CISDNavegacion() {
             instanciasPorCriterio={instanciasPorCurso[cursoActual.id] || {}}
             onGuardarMasivo={(alumnoId, criterioId, valor, instanciaId) => guardarNotaInstancia(cursoActual.id, alumnoId, criterioId, instanciaId, valor)}
             onAgregarInstancia={(criterioId, nombre) => agregarInstanciaEvaluacion(cursoActual.id, criterioId, nombre)}
+            onEditarInstancia={(criterioId, instanciaId, nombre) => editarInstanciaEvaluacion(cursoActual.id, criterioId, instanciaId, nombre)}
+            onBorrarInstancia={(criterioId, instanciaId) => borrarInstanciaEvaluacion(cursoActual.id, criterioId, instanciaId)}
             notaAprobacion={notaAprobacion}
             onCambiarNotaAprobacion={setNotaAprobacion}
             onCambiarNotaOficial={(alumnoId, campo, valor) => actualizarNotaOficial(cursoActual.id, alumnoId, campo, valor)}
@@ -6720,6 +6875,8 @@ function CISDNavegacion() {
             onGuardarEvento={(alumnoId, criterioId, valor, extra) => guardarEvento(cursoActual.id, alumnoId, criterioId, valor, extra)}
             onGuardarNotaInstancia={(alumnoId, criterioId, instanciaId, valor) => guardarNotaInstancia(cursoActual.id, alumnoId, criterioId, instanciaId, valor)}
             onAgregarInstancia={(criterioId, nombre) => agregarInstanciaEvaluacion(cursoActual.id, criterioId, nombre)}
+            onEditarInstancia={(criterioId, instanciaId, nombre) => editarInstanciaEvaluacion(cursoActual.id, criterioId, instanciaId, nombre)}
+            onBorrarInstancia={(criterioId, instanciaId) => borrarInstanciaEvaluacion(cursoActual.id, criterioId, instanciaId)}
             onBorrarEvento={(alumnoId, eventoId) => borrarEvento(cursoActual.id, alumnoId, eventoId)}
             onEditarEvento={(alumnoId, eventoId, nuevoValor) => editarEvento(cursoActual.id, alumnoId, eventoId, nuevoValor)}
             onSetRecuperatorio={(alumnoId, eventoId, valor) => setRecuperatorio(cursoActual.id, alumnoId, eventoId, valor)}
