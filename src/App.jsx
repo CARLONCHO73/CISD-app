@@ -2918,7 +2918,6 @@ function PantallaFichaAlumno({ colegio, curso, alumno, periodo, criteriosActivos
 
   const pasos = [
     { titulo: "Planilla de Calificaciones de este alumno", texto: "Aquí cargás la Planilla de Calificaciones (informes y cuatrimestres), igual que en el papel. La celda \"Nota\" se pinta según aprueba o no. Podés modificar cualquier celda cuando quieras: el cambio se refleja también en la Planilla del curso. Y si mantenés presionado un encabezado (como \"1° inf\") desde esa Planilla, podés renombrarlo (por ejemplo a \"1° bim\").", ref: refTablaNotas },
-    { titulo: "Criterios de seguimiento", texto: "Tocá cualquier bloque para cargar un registro nuevo. Mantené presionado un instante para arrastrarlo y cambiar el orden.", ref: refCriteriosFicha },
     { titulo: "Historial completo", texto: "Aquí ves y editás todos los registros de este alumno, de cualquier criterio y período, en un solo lugar.", ref: refVerRegistros },
   ];
 
@@ -2943,8 +2942,6 @@ function PantallaFichaAlumno({ colegio, curso, alumno, periodo, criteriosActivos
         <div ref={refTablaNotas}>
           <TablaNotasOficiales notas={alumno.notasOficiales} notaAprobacion={notaAprobacion} onCambiar={(campo, valor) => onCambiarNotaOficial(alumno.id, campo, valor)} columnas={columnas} promedioAuto={promedioAuto} onTogglePromedioAuto={onTogglePromedioAuto} />
         </div>
-
-        <CuadroGuia texto="Mantené presionado un bloque un instante para arrastrarlo y cambiar el orden. Tocá un criterio para cargar un registro." />
 
         {pendienteOrden && (
           <BannerConfirmarOrden
@@ -5550,20 +5547,23 @@ function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno
             onQuitar={(id) => onQuitarCriterio(id, curso.id)}
             onEditar={onEditarCriterio}
             onEliminarDefinitivo={onEliminarCriterioDefinitivo}
-            elementoJunto={
-              alumnos.length > 0 && (
-                <div style={{ flex: 1, minWidth: 140, display: "flex", alignItems: "center", gap: 7, background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 999, padding: "7px 12px" }}>
-                  <Search size={14} color={COLORS.inkSoft} strokeWidth={2.2} />
-                  <input
-                    value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar alumno…"
-                    style={{ flex: 1, border: "none", outline: "none", background: "transparent", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, color: COLORS.ink }}
-                  />
-                </div>
-              )
-            }
           />
-          <ChipNotaAprobacion notaAprobacion={notaAprobacion} onAbrir={() => setEditarNotaAprobacionAbierto(true)} />
         </div>
+
+        {alumnos.length > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+            <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 7, background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 999, padding: "7px 12px" }}>
+              <Search size={14} color={COLORS.inkSoft} strokeWidth={2.2} />
+              <input
+                value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar alumno…"
+                style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, color: COLORS.ink }}
+              />
+            </div>
+            <div style={{ flexShrink: 0 }}>
+              <ChipNotaAprobacion notaAprobacion={notaAprobacion} onAbrir={() => setEditarNotaAprobacionAbierto(true)} />
+            </div>
+          </div>
+        )}
 
         {editarNotaAprobacionAbierto && (
           <PopupNotaAprobacion
