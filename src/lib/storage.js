@@ -94,8 +94,13 @@ window.storage = {
       .maybeSingle();
 
     if (error) {
-      console.error("No se pudo leer de Supabase:", error);
-      return null;
+      // Importante: acá NO devolvemos null. Devolver null se interpreta
+      // como "todavía no hay nada guardado" (docente nuevo) — pero esto
+      // es un error real de conexión, una cosa completamente distinta.
+      // Si lo tratáramos igual, la app podía terminar guardando un
+      // estado vacío encima de datos reales por un simple corte de red.
+      console.error("No se pudo leer de Supabase (error de red, no se interpreta como vacío):", error);
+      throw new Error("No se pudo confirmar la lectura de datos: " + error.message);
     }
     if (!data || estaVacio(data[columna])) return null;
 
