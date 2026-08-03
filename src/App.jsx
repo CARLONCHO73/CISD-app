@@ -6007,10 +6007,12 @@ function CISDNavegacion() {
           if (datos.registroSaludo) setRegistroSaludo(datos.registroSaludo);
           if (typeof datos.ultimaFraseIndex === "number") setUltimaFraseIndex(datos.ultimaFraseIndex);
         }
-      } catch (err) {
-        // Primera vez: todavía no eligió un nombre.
-      } finally {
         if (activo) setCargadoPerfil(true);
+      } catch (err) {
+        // Error real de conexión al leer el perfil: no seguimos adelante
+        // como si fuera "docente nuevo" — mostramos el aviso y frenamos.
+        console.error("Error real al cargar el perfil (no se avanza):", err);
+        if (activo) setErrorCargaSesion(true);
       }
     }
     cargarPerfil();
@@ -6063,10 +6065,14 @@ function CISDNavegacion() {
           if (datos.tourVistoPorPantalla) setTourVistoPorPantalla(datos.tourVistoPorPantalla);
           if (datos.notas) setNotas(datos.notas);
         }
-      } catch (err) {
-        // Primera vez: no hay nada guardado todavía.
-      } finally {
         if (activo) setCargado(true);
+      } catch (err) {
+        // Error real de conexión al leer los datos: acá es donde más
+        // importa no seguir adelante como si fuera "docente nuevo" — un
+        // corte de red pasajero no puede terminar en guardar todo vacío.
+        // Frenamos con el mismo aviso de siempre.
+        console.error("Error real al cargar colegios/cursos (no se avanza):", err);
+        if (activo) setErrorCargaSesion(true);
       }
     }
     cargar();
