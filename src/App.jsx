@@ -7215,6 +7215,12 @@ function PantallaLogin() {
 // Portón de acceso: mientras se confirma si hay sesión iniciada, muestra
 // un loader. Sin sesión, muestra la pantalla de login. Con sesión activa,
 // deja pasar directo a la app.
+// Si ya se puso el PIN correctamente hace poco (menos de este tiempo),
+// no se vuelve a pedir al reabrir la app — pensado para cuando la
+// pantalla se apaga y el celular recarga la app sola cada vez, algo muy
+// común mientras se está en clase.
+const MINUTOS_GRACIA_PIN = 20;
+
 function AuthGate() {
   const [cargando, setCargando] = useState(true);
   const [sesion, setSesion] = useState(null);
@@ -7238,8 +7244,21 @@ function AuthGate() {
     }
     const recuperando = localStorage.getItem("cisd-pin-recuperando") === "1";
     const hashGuardado = localStorage.getItem("cisd-pin-hash");
-    setEstadoPin(recuperando || !hashGuardado ? "crear" : "pedir");
+    if (recuperando || !hashGuardado) {
+      setEstadoPin("crear");
+      return;
+    }
+    const ultimoDesbloqueo = Number(localStorage.getItem("cisd-pin-ultimo-desbloqueo") || 0);
+    const minutosPasados = (Date.now() - ultimoDesbloqueo) / 60000;
+    setEstadoPin(ultimoDesbloqueo && minutosPasados < MINUTOS_GRACIA_PIN ? "desbloqueado" : "pedir");
   }, [sesion]);
+
+  // Recuerda el momento del desbloqueo, para el período de gracia de más
+  // arriba, y pasa a la app.
+  function marcarDesbloqueado() {
+    try { localStorage.setItem("cisd-pin-ultimo-desbloqueo", String(Date.now())); } catch {}
+    setEstadoPin("desbloqueado");
+  }
 
   if (cargando) {
     return (
@@ -7252,10 +7271,10 @@ function AuthGate() {
   if (!sesion) return <PantallaLogin />;
 
   if (estadoPin === "crear") {
-    return <PantallaCrearPin onListo={() => setEstadoPin("desbloqueado")} />;
+    return <PantallaCrearPin onListo={marcarDesbloqueado} />;
   }
   if (estadoPin === "pedir") {
-    return <PantallaPedirPin correo={sesion.user.email} onDesbloqueado={() => setEstadoPin("desbloqueado")} />;
+    return <PantallaPedirPin correo={sesion.user.email} onDesbloqueado={marcarDesbloqueado} />;
   }
   if (estadoPin === "desbloqueado") {
     return <CISDNavegacion />;
