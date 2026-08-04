@@ -7088,9 +7088,15 @@ function PantallaPedirPin({ correo, onDesbloqueado }) {
   }
 
   async function olvidoPin() {
+    setError("");
+    const { error: err } = await supabase.auth.signInWithOtp({ email: correo, options: { emailRedirectTo: window.location.origin } });
+    if (err) {
+      console.error("Error al reenviar el link (olvidé mi PIN):", err);
+      setError(err.message || "No se pudo enviar el correo. Probá de nuevo en un momento.");
+      return;
+    }
     localStorage.setItem("cisd-pin-recuperando", "1");
     setRecuperando(true);
-    await supabase.auth.signInWithOtp({ email: correo, options: { emailRedirectTo: window.location.origin } });
     setCorreoEnviado(true);
   }
 
@@ -7158,7 +7164,8 @@ function PantallaLogin() {
     });
     setEnviando(false);
     if (err) {
-      setError("No se pudo enviar el correo. Probá de nuevo en un momento.");
+      console.error("Error al enviar el link de acceso:", err);
+      setError(err.message || "No se pudo enviar el correo. Probá de nuevo en un momento.");
       return;
     }
     setEnviado(true);
