@@ -3213,7 +3213,7 @@ function CorreccionMasiva({ alumnos, criteriosInstancias, periodo, instanciasPor
       <div style={{ background: COLORS.pineDark, color: COLORS.white, padding: "16px 18px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 600 }}>
-            <ClipboardList size={18} strokeWidth={2.2} /> Carga masiva
+            <ClipboardList size={18} strokeWidth={2.2} /> Carga rápida de notas
           </div>
           <span onClick={onCerrar} style={{ cursor: "pointer", fontSize: 20 }}>×</span>
         </div>
@@ -5453,6 +5453,7 @@ function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno
 
   const pasos = [
     { titulo: "Tomá asistencia", texto: "Tocá este botón para abrir la planilla de asistencia del día.", ref: refAsistencia },
+    { titulo: "Herramientas y filtros", texto: "Tocá acá para acceder a la carga rápida de notas, la planilla, los recuperatorios, el informe para imprimir y los criterios de seguimiento del curso.", ref: refHerramientas },
     { titulo: "Sumar alumnos", texto: "Escribí un Apellido y Nombre y presioná Enter para agregarlo rápido; tocá un alumno para abrir su ficha.", ref: refAlumnos },
     { titulo: "Mujer o Varón", texto: "Al tocar \"Agregar\" (o presionar Enter), aparece un cartel para elegir Mujer o Varón. Al tocar una opción, se guarda el alumno directamente. No es solo un dato: define el color con el que se muestra el nombre en todas las planillas, para identificar a cada alumno de un vistazo.", ref: refAlumnos },
   ];
@@ -5522,7 +5523,7 @@ function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno
               onClick={() => { if (criteriosInstancias.length > 0) { setMasivaAbierta(true); setHerramientasAbierto(false); } }}
               style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${COLORS.pine}`, background: "transparent", color: COLORS.pine, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: criteriosInstancias.length > 0 ? "pointer" : "default", opacity: criteriosInstancias.length > 0 ? 1 : 0.45 }}
             >
-              <ClipboardList size={14} strokeWidth={2.4} /> Carga masiva
+              <ClipboardList size={14} strokeWidth={2.4} /> Carga rápida de notas
             </button>
 
             <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, fontWeight: 700, color: COLORS.inkSoft, textTransform: "uppercase", letterSpacing: 0.6, marginTop: 6 }}>Vistas</div>
