@@ -5441,6 +5441,7 @@ function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno
   const [informesAbierto, setInformesAbierto] = useState(false);
   const [menuRecuperatoriosAbierto, setMenuRecuperatoriosAbierto] = useState(false);
   const [editarNotaAprobacionAbierto, setEditarNotaAprobacionAbierto] = useState(false);
+  const [herramientasAbierto, setHerramientasAbierto] = useState(false);
   const [tourActivo, setTourActivo] = useState(!tourVisto);
   const refAsistencia = useRef(null);
   const refCriterios = useRef(null);
@@ -5448,13 +5449,10 @@ function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno
   const refPlanillaGrupo = useRef(null);
   const refInformes = useRef(null);
   const refAlumnos = useRef(null);
+  const refHerramientas = useRef(null);
 
   const pasos = [
     { titulo: "Tomá asistencia", texto: "Tocá este botón para abrir la planilla de asistencia del día.", ref: refAsistencia },
-    { titulo: "Criterios de seguimiento", texto: "Aquí activás los criterios que vas a usar en este curso (Participación, Evaluación escrita, Conducta, etc.) o creás los tuyos propios.", ref: refCriterios },
-    { titulo: "Carga masiva", texto: "Cargá de una sola vez las notas de una evaluación escrita: aquí aparece el listado completo de alumnos para completar rápido, uno tras otro.", ref: refCargaMasiva },
-    { titulo: "Planilla oficial y recuperatorios", texto: "Desde aquí accedés a la planilla oficial de notas, y a los recuperatorios de Diciembre y Febrero.", ref: refPlanillaGrupo },
-    { titulo: "Informes para imprimir", texto: "Este botón genera un informe en PDF o Word con las notas y el seguimiento de cada alumno, listo para entregar a las familias.", ref: refInformes },
     { titulo: "Sumar alumnos", texto: "Escribí un Apellido y Nombre y presioná Enter para agregarlo rápido; tocá un alumno para abrir su ficha.", ref: refAlumnos },
     { titulo: "Mujer o Varón", texto: "Al tocar \"Agregar\" (o presionar Enter), aparece un cartel para elegir Mujer o Varón. Al tocar una opción, se guarda el alumno directamente. No es solo un dato: define el color con el que se muestra el nombre en todas las planillas, para identificar a cada alumno de un vistazo.", ref: refAlumnos },
   ];
@@ -5478,92 +5476,22 @@ function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno
         }
       />
       <div style={{ padding: "10px 16px 90px 16px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, marginBottom: 6, flexWrap: "nowrap" }}>
-          <SelectorPeriodo periodo={periodo} onChange={onCambiarPeriodo} />
-          <button
-            ref={refCargaMasiva}
-            onClick={() => criteriosInstancias.length > 0 && setMasivaAbierta(true)}
-            style={{ display: "flex", alignItems: "center", gap: 4, padding: "5px 10px", borderRadius: 999, border: `1.5px solid ${COLORS.pine}`, background: "transparent", color: COLORS.pine, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, fontWeight: 600, cursor: criteriosInstancias.length > 0 ? "pointer" : "default", opacity: criteriosInstancias.length > 0 ? 1 : 0.45, whiteSpace: "nowrap", flexShrink: 0 }}
-          >
-            <ClipboardList size={12} strokeWidth={2.4} /> Carga masiva
-          </button>
-        </div>
-
-        <div ref={refPlanillaGrupo} style={{ display: "flex", gap: 6, marginBottom: 6 }}>
-          <button
-            onClick={() => setPlanillaAbierta(true)}
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, flex: 1, padding: "6px 8px", borderRadius: 10, border: `1px solid ${COLORS.line}`, background: COLORS.white, color: COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
-          >
-            <ClipboardList size={13} strokeWidth={2.4} /> Planilla
-          </button>
-
-          <div style={{ position: "relative", flex: 1 }}>
-            <button
-              onClick={() => setMenuRecuperatoriosAbierto((v) => !v)}
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, width: "100%", padding: "6px 8px", borderRadius: 10, border: `1px solid ${COLORS.ochre}`, background: COLORS.white, color: COLORS.ochre, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
-            >
-              Recuperatorios <ChevronLeft size={12} strokeWidth={2.6} style={{ transform: "rotate(-90deg)" }} />
-            </button>
-            {menuRecuperatoriosAbierto && (
-              <>
-                <div onClick={() => setMenuRecuperatoriosAbierto(false)} style={{ position: "fixed", inset: 0, zIndex: 95 }} />
-                <div style={{ position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, background: COLORS.white, borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.28)", padding: 6, zIndex: 96 }}>
-                  <div
-                    onClick={() => { setRecuperatorioAbierto("diciembre"); setMenuRecuperatoriosAbierto(false); }}
-                    style={{ padding: "9px 10px", borderRadius: 8, color: COLORS.ochre, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
-                  >
-                    Diciembre
-                  </div>
-                  <div
-                    onClick={() => { setRecuperatorioAbierto("febrero"); setMenuRecuperatoriosAbierto(false); }}
-                    style={{ padding: "9px 10px", borderRadius: 8, color: COLORS.rose, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
-                  >
-                    Febrero
-                  </div>
-                </div>
-              </>
-            )}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 7, background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 999, padding: "7px 12px" }}>
+            <Search size={14} color={COLORS.inkSoft} strokeWidth={2.2} />
+            <input
+              value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar alumno…"
+              style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, color: COLORS.ink }}
+            />
           </div>
-
           <button
-            ref={refInformes}
-            onClick={() => setInformesAbierto(true)}
-            title="Informes para imprimir"
-            style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 5, flexShrink: 0, padding: "6px 10px", borderRadius: 10, border: `1px solid ${COLORS.line}`, background: COLORS.white, color: COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+            ref={refHerramientas}
+            onClick={() => setHerramientasAbierto(true)}
+            style={{ display: "flex", alignItems: "center", gap: 5, padding: "7px 12px", borderRadius: 999, border: `1.5px solid ${COLORS.ochre}`, background: COLORS.white, color: COLORS.ochre, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 700, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap" }}
           >
-            <Printer size={14} strokeWidth={2.4} /> Informe
+            <SlidersHorizontal size={14} strokeWidth={2.4} /> Herramientas
           </button>
         </div>
-
-        <div ref={refCriterios} style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-          <SeccionCriterios
-            curso={curso}
-            criterios={criterios}
-            ordenPorCurso={ordenPorCurso}
-            onReordenar={(nuevoOrden, aplicarATodos) => onReordenarCriterios(curso.id, nuevoOrden, aplicarATodos)}
-            onAgregar={onAgregarCriterio}
-            onUsar={(id) => onUsarCriterio(id, curso.id)}
-            onUsarEnTodos={onUsarCriterioEnTodos}
-            onQuitar={(id) => onQuitarCriterio(id, curso.id)}
-            onEditar={onEditarCriterio}
-            onEliminarDefinitivo={onEliminarCriterioDefinitivo}
-          />
-        </div>
-
-        {alumnos.length > 0 && (
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
-            <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 7, background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 999, padding: "7px 12px" }}>
-              <Search size={14} color={COLORS.inkSoft} strokeWidth={2.2} />
-              <input
-                value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar alumno…"
-                style={{ flex: 1, minWidth: 0, border: "none", outline: "none", background: "transparent", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, color: COLORS.ink }}
-              />
-            </div>
-            <div style={{ flexShrink: 0 }}>
-              <ChipNotaAprobacion notaAprobacion={notaAprobacion} onAbrir={() => setEditarNotaAprobacionAbierto(true)} />
-            </div>
-          </div>
-        )}
 
         {editarNotaAprobacionAbierto && (
           <PopupNotaAprobacion
@@ -5573,10 +5501,96 @@ function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno
           />
         )}
 
-        <div ref={refAlumnos}>
+        <div ref={refAlumnos} style={{ marginTop: 10 }}>
           <ListaAlumnosRapida alumnos={alumnosFiltrados} onAgregar={onAgregarAlumno} onBorrar={onBorrarAlumno} onEditar={onEditarAlumno} onAbrirFicha={onAbrirFicha} />
         </div>
       </div>
+
+      {herramientasAbierto && (
+        <>
+          <div onClick={() => setHerramientasAbierto(false)} style={{ position: "fixed", inset: 0, background: "rgba(21,53,49,0.55)", zIndex: 120 }} />
+          <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(320px, 86vw)", background: COLORS.paper, zIndex: 121, boxShadow: "-10px 0 30px rgba(0,0,0,0.3)", padding: "20px 16px 24px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
+              <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 18, color: COLORS.pineDark }}>Herramientas y filtros</div>
+              <button onClick={() => setHerramientasAbierto(false)} style={{ width: 30, height: 30, borderRadius: "50%", border: "none", background: COLORS.paperDim, color: COLORS.pineDark, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>✕</button>
+            </div>
+
+            <SelectorPeriodo periodo={periodo} onChange={onCambiarPeriodo} />
+
+            <button
+              ref={refCargaMasiva}
+              onClick={() => { if (criteriosInstancias.length > 0) { setMasivaAbierta(true); setHerramientasAbierto(false); } }}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${COLORS.pine}`, background: "transparent", color: COLORS.pine, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: criteriosInstancias.length > 0 ? "pointer" : "default", opacity: criteriosInstancias.length > 0 ? 1 : 0.45 }}
+            >
+              <ClipboardList size={14} strokeWidth={2.4} /> Carga masiva
+            </button>
+
+            <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, fontWeight: 700, color: COLORS.inkSoft, textTransform: "uppercase", letterSpacing: 0.6, marginTop: 6 }}>Vistas</div>
+
+            <button
+              onClick={() => { setPlanillaAbierta(true); setHerramientasAbierto(false); }}
+              style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 12px", borderRadius: 11, border: `1px solid ${COLORS.line}`, background: COLORS.white, color: COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, fontWeight: 600, cursor: "pointer", textAlign: "left" }}
+            >
+              <ClipboardList size={16} strokeWidth={2.2} /> Planilla
+            </button>
+
+            <div ref={refPlanillaGrupo} style={{ position: "relative" }}>
+              <button
+                onClick={() => setMenuRecuperatoriosAbierto((v) => !v)}
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "11px 12px", borderRadius: 11, border: `1px solid ${COLORS.ochre}`, background: COLORS.white, color: COLORS.ochre, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, fontWeight: 600, cursor: "pointer" }}
+              >
+                Recuperatorios <ChevronLeft size={13} strokeWidth={2.6} style={{ transform: "rotate(-90deg)" }} />
+              </button>
+              {menuRecuperatoriosAbierto && (
+                <>
+                  <div onClick={() => setMenuRecuperatoriosAbierto(false)} style={{ position: "fixed", inset: 0, zIndex: 125 }} />
+                  <div style={{ position: "relative", zIndex: 126, background: COLORS.white, borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.28)", padding: 6, marginTop: 6 }}>
+                    <div
+                      onClick={() => { setRecuperatorioAbierto("diciembre"); setMenuRecuperatoriosAbierto(false); setHerramientasAbierto(false); }}
+                      style={{ padding: "9px 10px", borderRadius: 8, color: COLORS.ochre, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                    >
+                      Diciembre
+                    </div>
+                    <div
+                      onClick={() => { setRecuperatorioAbierto("febrero"); setMenuRecuperatoriosAbierto(false); setHerramientasAbierto(false); }}
+                      style={{ padding: "9px 10px", borderRadius: 8, color: COLORS.rose, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                    >
+                      Febrero
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <button
+              ref={refInformes}
+              onClick={() => { setInformesAbierto(true); setHerramientasAbierto(false); }}
+              style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 12px", borderRadius: 11, border: `1px solid ${COLORS.line}`, background: COLORS.white, color: COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, fontWeight: 600, cursor: "pointer", textAlign: "left" }}
+            >
+              <Printer size={16} strokeWidth={2.2} /> Informe
+            </button>
+
+            <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, fontWeight: 700, color: COLORS.inkSoft, textTransform: "uppercase", letterSpacing: 0.6, marginTop: 6 }}>Seguimiento</div>
+
+            <div ref={refCriterios}>
+              <SeccionCriterios
+                curso={curso}
+                criterios={criterios}
+                ordenPorCurso={ordenPorCurso}
+                onReordenar={(nuevoOrden, aplicarATodos) => onReordenarCriterios(curso.id, nuevoOrden, aplicarATodos)}
+                onAgregar={onAgregarCriterio}
+                onUsar={(id) => onUsarCriterio(id, curso.id)}
+                onUsarEnTodos={onUsarCriterioEnTodos}
+                onQuitar={(id) => onQuitarCriterio(id, curso.id)}
+                onEditar={onEditarCriterio}
+                onEliminarDefinitivo={onEliminarCriterioDefinitivo}
+              />
+            </div>
+
+            <ChipNotaAprobacion notaAprobacion={notaAprobacion} onAbrir={() => setEditarNotaAprobacionAbierto(true)} />
+          </div>
+        </>
+      )}
 
       {tourActivo && (
         <TourGuiado pasos={pasos} onCerrar={() => { setTourActivo(false); onMarcarTourVisto(); }} />
