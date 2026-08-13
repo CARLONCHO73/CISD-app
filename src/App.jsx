@@ -35,6 +35,46 @@ const etiquetaCampoStyle = {
   textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 6,
 };
 
+// Pantalla de carga con esqueleto animado (en vez de un simple "Cargando…"
+// en blanco), para que la espera se sienta acompañada. Es puramente visual:
+// no toca ninguna lógica de carga o guardado de datos.
+function PantallaCargando({ texto = "Cargando…" }) {
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: COLORS.paper, padding: 24 }}>
+      <style>{`
+        @import url('${FONT_URL}');
+        @keyframes cisdPulso { 0%, 100% { opacity: 0.35; } 50% { opacity: 0.85; } }
+      `}</style>
+      <div style={{ width: "100%", maxWidth: 280, display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <div
+          style={{
+            width: 48, height: 48, borderRadius: 12, background: COLORS.pineDark, color: COLORS.paper,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 22,
+            marginBottom: 22, animation: "cisdPulso 1.4s ease-in-out infinite",
+          }}
+        >
+          C
+        </div>
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            style={{
+              width: i === 1 ? "88%" : i === 2 ? "68%" : "100%",
+              height: 12, borderRadius: 999, background: COLORS.line,
+              marginBottom: 10, animation: "cisdPulso 1.4s ease-in-out infinite",
+              animationDelay: `${i * 0.15}s`,
+            }}
+          />
+        ))}
+        <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: COLORS.inkSoft, marginTop: 10 }}>
+          {texto}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function fechaISO() { return new Date().toISOString(); }
 function fechaCorta(iso) {
   const d = new Date(iso);
@@ -6677,12 +6717,7 @@ function CISDNavegacion() {
   }
 
   if (!cargado || !cargadoPerfil) {
-    return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: COLORS.paper }}>
-        <style>{`@import url('${FONT_URL}');`}</style>
-        <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, color: COLORS.inkSoft }}>Cargando…</div>
-      </div>
-    );
+    return <PantallaCargando texto="Trayendo tus colegios y cursos…" />;
   }
 
   // Primera vez que se abre CISD en este dispositivo: todavía no hay
@@ -7295,11 +7330,7 @@ function AuthGate() {
   }
 
   if (cargando) {
-    return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: COLORS.paper }}>
-        <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, color: COLORS.inkSoft }}>Cargando…</div>
-      </div>
-    );
+    return <PantallaCargando texto="Confirmando tu sesión…" />;
   }
 
   if (!sesion) return <PantallaLogin />;
