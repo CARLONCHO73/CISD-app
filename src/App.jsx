@@ -2052,6 +2052,18 @@ function ListaAlumnosRapida({ alumnos, onAgregar, onBorrar, onEditar, onAbrirFic
           </div>
         ))}
 
+        {esPrimerAlumno && (
+          <div style={{ padding: "26px 16px 10px", textAlign: "center" }}>
+            <div style={{ fontSize: 26, marginBottom: 8 }}>🎓</div>
+            <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 15.5, color: COLORS.pineDark, marginBottom: 4 }}>
+              Todavía no hay alumnos en este curso
+            </div>
+            <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, color: COLORS.inkSoft }}>
+              Escribí el primer Apellido y Nombre abajo para arrancar.
+            </div>
+          </div>
+        )}
+
         {mostrarForm && (
           <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 8, padding: "10px 12px" }}>
             <span style={{ minWidth: 20, textAlign: "left", flexShrink: 0, fontFamily: "'IBM Plex Mono', monospace", fontSize: 12.5, color: COLORS.ochre }}>
