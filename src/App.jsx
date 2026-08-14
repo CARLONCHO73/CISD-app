@@ -4229,7 +4229,7 @@ function PantallaRecuperatorio({ instancia, curso, alumnos, notaAprobacion, onCa
   );
 }
 
-function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCambiarNotaOficial, nombresColumnasPorColegio, onRenombrarColumnaNota, onCerrar, tourVisto, onMarcarTourVisto, promedioAuto, onTogglePromedioAuto }) {
+function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCambiarNotaOficial, nombresColumnasPorColegio, onRenombrarColumnaNota, onCerrar, onAbrirFicha, tourVisto, onMarcarTourVisto, promedioAuto, onTogglePromedioAuto }) {
   const [pendiente, setPendiente] = useState(null); // { alumnoId, alumnoNombre, campo, columnaLabel, valorAnterior, valorNuevo }
   const [renombrando, setRenombrando] = useState(null); // { key, label } — modal de texto abierto
   const [pendienteRenombre, setPendienteRenombre] = useState(null); // { key, labelNuevo } — falta elegir alcance
@@ -4333,10 +4333,11 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
             {alumnos.map((al, i) => (
               <div
                 key={al.id}
+                onClick={() => { onCerrar(); onAbrirFicha(al); }}
                 style={{
                   background: COLORS.white, borderTop: `1px solid ${COLORS.line}`, borderRight: `1px solid ${COLORS.line}`,
                   padding: "7px 8px", display: "flex", alignItems: "center", gap: 4, minWidth: 0, height: 31, boxSizing: "border-box",
-                  contentVisibility: "auto", containIntrinsicSize: "auto 31px",
+                  contentVisibility: "auto", containIntrinsicSize: "auto 31px", cursor: "pointer",
                 }}
               >
                 <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 10.5, color: COLORS.inkSoft, flexShrink: 0 }}>{i + 1}.</span>
@@ -5676,6 +5677,7 @@ function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno
           nombresColumnasPorColegio={nombresColumnasPorColegio}
           onRenombrarColumnaNota={onRenombrarColumnaNota}
           onCerrar={() => setPlanillaAbierta(false)}
+          onAbrirFicha={onAbrirFicha}
           tourVisto={!!(tourVistoPorPantalla || {}).planilla}
           onMarcarTourVisto={() => onMarcarTourVistoPantalla("planilla")}
           promedioAuto={promedioAuto}
