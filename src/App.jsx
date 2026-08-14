@@ -2225,16 +2225,19 @@ function CampoOpciones({ opciones, valorActual, onGuardar }) {
     setTimeout(() => setGuardando(null), 300);
   }
   return (
-    <div style={{ display: "flex", flexWrap: "nowrap", overflowX: "auto", gap: 4, paddingBottom: 2 }}>
+    <div style={{ display: "flex", flexWrap: "nowrap", overflowX: "auto", gap: 3, paddingBottom: 2 }}>
       {opciones.map((op) => {
         const mostrandoCheck = guardando === op;
-        const activo = valorActual === op || mostrandoCheck;
+        // Solo se pinta mientras confirma el guardado (instante del ✓); una
+        // vez guardado, vuelve a blanco como el resto, aunque el valor
+        // sigue registrado abajo, en el historial de texto.
+        const activo = mostrandoCheck;
         return (
           <button key={op} onClick={() => tocar(op)} disabled={!!guardando}
             style={{
-              padding: "5px 8px", borderRadius: 999, border: `1.5px solid ${activo ? COLORS.pine : COLORS.line}`,
+              padding: "4px 6px", borderRadius: 999, border: `1.5px solid ${activo ? COLORS.pine : COLORS.line}`,
               background: activo ? COLORS.pine : COLORS.white, color: activo ? COLORS.white : COLORS.ink,
-              fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, fontWeight: 500,
+              fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 10.5, fontWeight: 500,
               cursor: guardando ? "default" : "pointer", opacity: guardando && !mostrandoCheck ? 0.6 : 1,
               whiteSpace: "nowrap", flexShrink: 0, minWidth: mostrandoCheck ? 28 : undefined, textAlign: "center",
             }}
@@ -2623,7 +2626,7 @@ function CampoCriterio({ alumno, criterio, periodo, instancias, notaAprobacion, 
         <CampoOpciones opciones={criterio.opciones || []} valorActual={ultimoValorSimple(alumno, criterio.id, periodo)} onGuardar={(v) => onGuardarEvento(criterio.id, v)} />
         {criterio.conObservacion && (
           <div style={{ marginTop: 8 }}>
-            <CampoTexto placeholder={`Observación sobre ${criterio.nombre.toLowerCase()}…`} onGuardar={(v) => onGuardarEvento(criterio.id, v)} />
+            <CampoTexto onGuardar={(v) => onGuardarEvento(criterio.id, v)} />
           </div>
         )}
         <MiniHistorial eventos={eventosDeCriterio(alumno, criterio.id, periodo)} onBorrar={onBorrarEvento} onEditar={onEditarEvento} notaAprobacion={notaAprobacion} />
@@ -2644,7 +2647,7 @@ function CampoCriterio({ alumno, criterio, periodo, instancias, notaAprobacion, 
         <CampoNumerico max={criterio.max || 10} valorActual={ultimoValorSimple(alumno, criterio.id, periodo)} notaAprobacion={notaAprobacion} onGuardar={(v) => onGuardarEvento(criterio.id, v)} />
         {criterio.conObservacion && (
           <div style={{ marginTop: 8 }}>
-            <CampoTexto placeholder={`Observación sobre ${criterio.nombre.toLowerCase()}…`} onGuardar={(v) => onGuardarEvento(criterio.id, v)} />
+            <CampoTexto onGuardar={(v) => onGuardarEvento(criterio.id, v)} />
           </div>
         )}
         <MiniHistorial eventos={eventosDeCriterio(alumno, criterio.id, periodo)} onBorrar={onBorrarEvento} onEditar={onEditarEvento} notaAprobacion={notaAprobacion} />
@@ -3016,7 +3019,7 @@ function PantallaFichaAlumno({ colegio, curso, alumno, periodo, criteriosActivos
               if (!c) return null;
               const color = coloresPorCriterio[id];
               return (
-                <div style={{ marginBottom: 16, background: color.fondo, border: `1px solid ${color.borde}`, borderRadius: 14, padding: "12px 12px 14px 12px" }}>
+                <div style={{ marginBottom: 10, background: color.fondo, border: `2px solid ${color.borde}`, borderRadius: 14, padding: "9px 10px 10px 10px" }}>
                   {c.tipo === "asistencia" ? (
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
                       <div style={{ ...etiquetaCampoStyle, color: color.texto, marginBottom: 0 }}>{c.nombre}</div>
@@ -3024,7 +3027,7 @@ function PantallaFichaAlumno({ colegio, curso, alumno, periodo, criteriosActivos
                     </div>
                   ) : (
                     <>
-                      <div style={{ ...etiquetaCampoStyle, color: color.texto, marginBottom: 8 }}>{c.nombre}</div>
+                      <div style={{ ...etiquetaCampoStyle, color: color.texto, marginBottom: 5 }}>{c.nombre}</div>
                       <CampoCriterio
                         alumno={alumno} criterio={c} periodo={periodo} instancias={instanciasPorCriterio[c.id]} notaAprobacion={notaAprobacion}
                         diasCurso={diasCurso}
