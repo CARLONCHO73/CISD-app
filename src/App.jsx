@@ -4235,6 +4235,7 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
   const [pendienteRenombre, setPendienteRenombre] = useState(null); // { key, labelNuevo } — falta elegir alcance
   const [tourActivo, setTourActivo] = useState(false); // DESACTIVADO TEMPORALMENTE (prueba diagnóstica del freeze en celular)
   const [modoEdicion, setModoEdicion] = useState(false);
+  const [menuDescargaAbierto, setMenuDescargaAbierto] = useState(false);
   const refGrilla = useRef(null);
   const refNota = useRef(null);
   const refPrimeraColumna = useRef(null);
@@ -4246,7 +4247,7 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
     { titulo: "Planilla oficial del curso", texto: "Es la misma tabla de 7 columnas que ves en la Ficha de cada alumno, pero de todo el curso junto. Se arma sola con lo que vas cargando.", ref: refGrilla },
     { titulo: "Corregir una celda", texto: "Tocá \"Editar\" arriba para habilitar la edición. Con eso activo, tocá cualquier celda para corregirla; te va a pedir confirmación antes de guardar el cambio. Tocá \"Listo\" para volver a bloquear la planilla.", ref: refNota },
     { titulo: "Renombrar un encabezado", texto: "Mantené presionado cualquier encabezado (por ejemplo, éste) para cambiarle el nombre, como \"1° bim\" en vez de \"1° inf\". Te va a preguntar si el nuevo nombre aplica solo a este colegio o a todos.", ref: refPrimeraColumna },
-    { titulo: "Descargar la planilla", texto: "Bajá la planilla completa, con todos los alumnos y sus notas, en un documento Word listo para imprimir o archivar.", ref: refDescargar },
+    { titulo: "Descargar la planilla", texto: "Bajá la planilla completa, con todos los alumnos y sus notas, en PDF o Word, lista para imprimir o archivar.", ref: refDescargar },
   ];
 
   const esEscritorio = useEsEscritorio();
@@ -4305,16 +4306,42 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
             >
               {modoEdicion ? "Listo" : "Editar"}
             </button>
-            <button
-              ref={refDescargar}
-              onClick={() => {
-                const html = construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto });
-                generarWordInformes(html, `Planilla de ${curso.nombre}; ${colegio.nombre}`.replace(/[^\w\-; ]/g, ""));
-              }}
-              style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 10, border: `1px solid rgba(255,255,255,0.35)`, background: "transparent", color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
-            >
-              <Printer size={14} strokeWidth={2.4} /> Descargar planilla
-            </button>
+            <div style={{ position: "relative" }}>
+              <button
+                ref={refDescargar}
+                onClick={() => setMenuDescargaAbierto((v) => !v)}
+                style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 10, border: `1px solid rgba(255,255,255,0.35)`, background: "transparent", color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+              >
+                <Printer size={14} strokeWidth={2.4} /> Descargar planilla
+              </button>
+              {menuDescargaAbierto && (
+                <>
+                  <div onClick={() => setMenuDescargaAbierto(false)} style={{ position: "fixed", inset: 0, zIndex: 95 }} />
+                  <div style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, background: COLORS.white, borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.28)", padding: 6, zIndex: 96, minWidth: 140 }}>
+                    <div
+                      onClick={() => {
+                        setMenuDescargaAbierto(false);
+                        const html = construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto });
+                        generarPDFInformes(html);
+                      }}
+                      style={{ padding: "9px 10px", borderRadius: 8, color: COLORS.pine, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                    >
+                      Descargar en PDF
+                    </div>
+                    <div
+                      onClick={() => {
+                        setMenuDescargaAbierto(false);
+                        const html = construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto });
+                        generarWordInformes(html, nombreArchivoCorto("Planilla", curso.nombre));
+                      }}
+                      style={{ padding: "9px 10px", borderRadius: 8, color: COLORS.pine, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                    >
+                      Descargar en Word
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -4702,7 +4729,7 @@ function ModalInformesTutores({ colegio, curso, alumnos, criteriosActivos, notaA
       incluirNotasOficiales: incluirNotas, columnasNotas, notaAprobacion, instanciasPorCriterio, diasCurso, promedioAuto,
     });
     if (formato === "pdf") generarPDFInformes(html);
-    else generarWordInformes(html, `Informe de ${curso.nombre}; ${colegio.nombre}`.replace(/[^\w\-; ]/g, ""));
+    else generarWordInformes(html, nombreArchivoCorto("Informe", curso.nombre));
   }
 
   return (
@@ -4807,6 +4834,17 @@ function colorDeColegio(colegios, colegioId) {
 function minutosDesdeHora(hhmm) {
   const [h, m] = hhmm.split(":").map(Number);
   return h * 60 + m;
+}
+
+// Nombre corto y prolijo para los archivos que se descargan, pensado para
+// que se entienda de un vistazo al imprimir o compartir (sin arrastrar el
+// nombre completo del colegio). Ej: "CISD_3A_Planilla_12-08"
+function nombreArchivoCorto(tipo, cursoNombre) {
+  const cursoLimpio = (cursoNombre || "").replace(/[°"'ª]/g, "").replace(/\s+/g, "");
+  const hoy = new Date();
+  const dd = String(hoy.getDate()).padStart(2, "0");
+  const mm = String(hoy.getMonth() + 1).padStart(2, "0");
+  return `CISD_${cursoLimpio}_${tipo}_${dd}-${mm}`;
 }
 
 // Grilla visual del horario semanal: un día por columna, y cada clase
