@@ -4793,12 +4793,12 @@ function ModalInformesTutores({ colegio, curso, alumnos, criteriosActivos, notaA
 // de horario (como el naranja/verde de una planilla armada a mano). Se
 // asigna siempre el mismo color al mismo colegio, por orden de aparición.
 const PALETA_COLEGIOS = [
-  { fondo: "#F3C77A", texto: "#5C3B0A", borde: "#D9A94E" }, // ocre/naranja
-  { fondo: "#9FCBA8", texto: "#0F3D22", borde: "#6FA97F" }, // verde
-  { fondo: "#A9C6E8", texto: "#0E2E52", borde: "#7FA6D4" }, // celeste
-  { fondo: "#E3A7B8", texto: "#5A1A2A", borde: "#CB7C93" }, // rosado
-  { fondo: "#CBB8E0", texto: "#3A215A", borde: "#A98BC9" }, // lila
-  { fondo: "#E3C398", texto: "#4A2F0C", borde: "#C79F63" }, // arena
+  { fondo: "#EEB65C", texto: "#5C3B0A", borde: "#B8842E" }, // ocre/naranja
+  { fondo: "#7EBB8D", texto: "#0F3D22", borde: "#4C8B5C" }, // verde
+  { fondo: "#8AB2DE", texto: "#0E2E52", borde: "#5680B3" }, // celeste
+  { fondo: "#D890A3", texto: "#5A1A2A", borde: "#B15D75" }, // rosado
+  { fondo: "#B79CD6", texto: "#3A215A", borde: "#8A67B0" }, // lila
+  { fondo: "#D3AC72", texto: "#4A2F0C", borde: "#A67F43" }, // arena
 ];
 function colorDeColegio(colegios, colegioId) {
   const indice = colegios.findIndex((c) => c.id === colegioId);
@@ -4814,7 +4814,8 @@ function minutosDesdeHora(hhmm) {
 // módulo de 80 minutos se ve el doble de alto que uno de 40), con un
 // color fijo por colegio para identificar todo de un vistazo.
 function GrillaHorarioSemanal({ colegios, bloquesPorDia, diasHorario, nombreDia, onTocarBloque, refReferenciaColores }) {
-  const PX_POR_MINUTO = 1.0;
+  const PX_POR_MINUTO = 0.85;
+  const HEADER_H = 28;
 
   const todosLosBloques = [];
   diasHorario.forEach((d) => {
@@ -4829,18 +4830,24 @@ function GrillaHorarioSemanal({ colegios, bloquesPorDia, diasHorario, nombreDia,
     });
   });
 
-  let inicioGrilla = 8 * 60;
+  // Piso fijo de 7:45 a 18:00, para que siempre se vean los espacios
+  // libres del día (útil para organizar turnos, mandados, etc.). Si el
+  // docente tiene clases fuera de ese rango (por ejemplo turno noche),
+  // la grilla se estira para mostrarlas — no se recortan nunca clases
+  // reales, el rango fijo es solo un piso mínimo, no un techo.
+  let inicioGrilla = 7 * 60 + 45;
   let finGrilla = 18 * 60;
   if (todosLosBloques.length > 0) {
     const inicios = todosLosBloques.map((b) => minutosDesdeHora(b.inicio));
     const fines = todosLosBloques.map((b) => minutosDesdeHora(b.fin));
-    inicioGrilla = Math.floor(Math.min(...inicios) / 60) * 60;
-    finGrilla = Math.ceil(Math.max(...fines) / 60) * 60;
+    inicioGrilla = Math.min(inicioGrilla, Math.floor(Math.min(...inicios) / 60) * 60);
+    finGrilla = Math.max(finGrilla, Math.ceil(Math.max(...fines) / 60) * 60);
   }
-  const alturaTotal = (finGrilla - inicioGrilla) * PX_POR_MINUTO;
+  const alturaGrilla = (finGrilla - inicioGrilla) * PX_POR_MINUTO;
+  const alturaTotal = HEADER_H + alturaGrilla;
 
   const marcasHora = [];
-  for (let m = inicioGrilla; m <= finGrilla; m += 60) marcasHora.push(m);
+  for (let m = Math.ceil(inicioGrilla / 60) * 60; m <= finGrilla; m += 60) marcasHora.push(m);
 
   return (
     <div>
@@ -4851,17 +4858,22 @@ function GrillaHorarioSemanal({ colegios, bloquesPorDia, diasHorario, nombreDia,
             <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, color: COLORS.inkSoft }}>{col.nombre}</span>
           </div>
         ))}
+        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+          <span style={{ width: 12, height: 12, borderRadius: 4, background: "rgba(92,104,95,0.16)", border: `1px solid ${COLORS.line}`, display: "inline-block", flexShrink: 0 }} />
+          <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, color: COLORS.inkSoft }}>Espacio libre</span>
+        </div>
       </div>
 
       <div style={{ overflowX: "auto", border: `1px solid ${COLORS.line}`, borderRadius: 12, background: COLORS.white }}>
         <div style={{ display: "flex", minWidth: 560 }}>
-          <div style={{ width: 46, flexShrink: 0, borderRight: `1px solid ${COLORS.line}`, position: "relative", height: alturaTotal }}>
+          <div style={{ width: 40, flexShrink: 0, borderRight: `1px solid ${COLORS.line}`, position: "sticky", left: 0, zIndex: 3, background: COLORS.white, height: alturaTotal }}>
+            <div style={{ height: HEADER_H, borderBottom: `1px solid ${COLORS.line}`, background: COLORS.paperDim }} />
             {marcasHora.map((m) => (
               <div
                 key={m}
                 style={{
-                  position: "absolute", top: (m - inicioGrilla) * PX_POR_MINUTO - 7, left: 0, right: 4,
-                  textAlign: "right", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, fontWeight: 600, color: COLORS.inkSoft,
+                  position: "absolute", top: HEADER_H + (m - inicioGrilla) * PX_POR_MINUTO - 7, left: 0, right: 4,
+                  textAlign: "right", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 10.5, fontWeight: 600, color: COLORS.inkSoft,
                 }}
               >
                 {String(Math.floor(m / 60)).padStart(2, "0")}:00
@@ -4869,43 +4881,71 @@ function GrillaHorarioSemanal({ colegios, bloquesPorDia, diasHorario, nombreDia,
             ))}
           </div>
 
-          {diasHorario.map((d) => (
-            <div key={d.code} style={{ flex: 1, minWidth: 88, position: "relative", height: alturaTotal, borderRight: `1px solid ${COLORS.line}` }}>
-              <div style={{
-                position: "sticky", top: 0, textAlign: "center", padding: "6px 2px", fontFamily: "'IBM Plex Sans', sans-serif",
-                fontSize: 11.5, fontWeight: 700, color: COLORS.pineDark, background: COLORS.paperDim, borderBottom: `1px solid ${COLORS.line}`,
-              }}>
-                {d.label}
-              </div>
-              {marcasHora.map((m) => (
-                <div key={m} style={{ position: "absolute", top: (m - inicioGrilla) * PX_POR_MINUTO, left: 0, right: 0, borderTop: `1px solid ${COLORS.paperDim}` }} />
-              ))}
-              {bloquesPorDia[d.code].filter((b) => b.inicio && b.fin).map((b, i) => {
-                const inicioMin = minutosDesdeHora(b.inicio);
-                const finMin = minutosDesdeHora(b.fin);
-                const color = colorDeColegio(colegios, b.colegio.id);
-                return (
+          {diasHorario.map((d) => {
+            const bloquesDia = bloquesPorDia[d.code].filter((b) => b.inicio && b.fin).sort((a, b) => minutosDesdeHora(a.inicio) - minutosDesdeHora(b.inicio));
+            // Calcula los huecos libres del día (dentro del rango visible
+            // de la grilla), para pintarlos con un tinte suave.
+            const huecos = [];
+            let cursor = inicioGrilla;
+            bloquesDia.forEach((b) => {
+              const ini = Math.max(minutosDesdeHora(b.inicio), inicioGrilla);
+              const fin = Math.min(minutosDesdeHora(b.fin), finGrilla);
+              if (ini > cursor) huecos.push([cursor, ini]);
+              cursor = Math.max(cursor, fin);
+            });
+            if (cursor < finGrilla) huecos.push([cursor, finGrilla]);
+
+            return (
+              <div key={d.code} style={{ flex: 1, minWidth: 88, position: "relative", height: alturaTotal, borderRight: `1px solid ${COLORS.line}` }}>
+                <div style={{
+                  position: "sticky", top: 0, height: HEADER_H, boxSizing: "border-box", display: "flex", alignItems: "center", justifyContent: "center",
+                  fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, fontWeight: 700, color: COLORS.pineDark, background: COLORS.paperDim, borderBottom: `1px solid ${COLORS.line}`,
+                }}>
+                  {d.label}
+                </div>
+
+                {huecos.map(([hIni, hFin], hi) => (
                   <div
-                    key={i}
-                    onClick={() => onTocarBloque(b.colegio, b.curso)}
+                    key={"hueco" + hi}
                     style={{
-                      position: "absolute", top: (inicioMin - inicioGrilla) * PX_POR_MINUTO + 1, left: 2, right: 2,
-                      height: (finMin - inicioMin) * PX_POR_MINUTO - 2, background: color.fondo, border: `1px solid ${color.borde}`,
-                      borderRadius: 8, padding: "4px 5px", overflow: "hidden", cursor: "pointer", boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
-                      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", gap: 1,
+                      position: "absolute", top: HEADER_H + (hIni - inicioGrilla) * PX_POR_MINUTO, left: 0, right: 0,
+                      height: (hFin - hIni) * PX_POR_MINUTO,
+                      background: "rgba(92,104,95,0.07)",
+                      pointerEvents: "none",
                     }}
-                  >
-                    <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 10, fontWeight: 700, color: color.texto, opacity: 0.9 }}>
-                      {b.inicio}-{b.fin}
+                  />
+                ))}
+
+                {marcasHora.map((m) => (
+                  <div key={m} style={{ position: "absolute", top: HEADER_H + (m - inicioGrilla) * PX_POR_MINUTO, left: 0, right: 0, borderTop: `1px solid ${COLORS.paperDim}` }} />
+                ))}
+                {bloquesDia.map((b, i) => {
+                  const inicioMin = minutosDesdeHora(b.inicio);
+                  const finMin = minutosDesdeHora(b.fin);
+                  const color = colorDeColegio(colegios, b.colegio.id);
+                  return (
+                    <div
+                      key={i}
+                      onClick={() => onTocarBloque(b.colegio, b.curso)}
+                      style={{
+                        position: "absolute", top: HEADER_H + (inicioMin - inicioGrilla) * PX_POR_MINUTO + 1, left: 2, right: 2,
+                        height: (finMin - inicioMin) * PX_POR_MINUTO - 2, background: color.fondo, border: `1.5px solid ${color.borde}`,
+                        borderRadius: 8, padding: "3px 4px", overflow: "hidden", cursor: "pointer", boxShadow: "0 1px 2px rgba(0,0,0,0.08)",
+                        display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", gap: 0,
+                      }}
+                    >
+                      <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 9.5, fontWeight: 700, color: color.texto, opacity: 0.9 }}>
+                        {b.inicio}-{b.fin}
+                      </div>
+                      <div style={{ fontFamily: "'Fraunces', serif", fontSize: 11, fontWeight: 600, color: color.texto, lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>
+                        {b.curso.nombre}{b.curso.materia ? ` · ${b.curso.materia}` : ""}
+                      </div>
                     </div>
-                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: 12, fontWeight: 600, color: color.texto, lineHeight: 1.25, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: "100%" }}>
-                      {b.curso.nombre}{b.curso.materia ? ` · ${b.curso.materia}` : ""}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ))}
+                  );
+                })}
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -5416,31 +5456,44 @@ function PantallaHorarioDocente({ colegios, cursosPorColegio, diasClasePorCurso,
             </div>
 
             <div ref={refFormBloque} style={{ marginTop: 14, padding: "12px", background: editandoIndice !== null ? COLORS.ochreSoft : COLORS.paperDim, borderRadius: 12, border: `1px dashed ${editandoIndice !== null ? COLORS.ochre : COLORS.line}` }}>
-              <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 700, color: COLORS.pineDark, marginBottom: 8 }}>
+              <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 700, color: COLORS.pineDark, marginBottom: 10 }}>
                 {editandoIndice !== null ? "Editar bloque" : "+ Agregar bloque"}
               </div>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 10.5, fontWeight: 700, color: COLORS.inkSoft, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 }}>Día</div>
                 <select
                   value={nuevoDia}
                   onChange={(e) => setNuevoDia(e.target.value)}
-                  style={{ border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: "6px 6px", fontSize: 12.5, fontFamily: "'IBM Plex Sans', sans-serif", color: COLORS.ink }}
+                  style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: "7px 8px", fontSize: 13, fontFamily: "'IBM Plex Sans', sans-serif", color: COLORS.ink }}
                 >
                   {DIAS_HORARIO.map((d) => <option key={d.code} value={d.code}>{NOMBRE_DIA[d.code]}</option>)}
                 </select>
-                <input
-                  type="time" value={nuevoInicio} onChange={(e) => setNuevoInicio(e.target.value)}
-                  style={{ border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: "6px 6px", fontSize: 12.5, fontFamily: "'IBM Plex Sans', sans-serif", color: COLORS.ink }}
-                />
-                <span style={{ fontSize: 12, color: COLORS.inkSoft }}>a</span>
-                <input
-                  type="time" value={nuevoFin} onChange={(e) => setNuevoFin(e.target.value)}
-                  style={{ border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: "6px 6px", fontSize: 12.5, fontFamily: "'IBM Plex Sans', sans-serif", color: COLORS.ink }}
-                />
+              </div>
+
+              <div style={{ display: "flex", gap: 10 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 10.5, fontWeight: 700, color: COLORS.inkSoft, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 }}>Desde</div>
+                  <input
+                    type="time" value={nuevoInicio} onChange={(e) => setNuevoInicio(e.target.value)}
+                    style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: "7px 8px", fontSize: 13, fontFamily: "'IBM Plex Sans', sans-serif", color: COLORS.ink }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 10.5, fontWeight: 700, color: COLORS.inkSoft, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 4 }}>Hasta</div>
+                  <input
+                    type="time" value={nuevoFin} onChange={(e) => setNuevoFin(e.target.value)}
+                    style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: "7px 8px", fontSize: 13, fontFamily: "'IBM Plex Sans', sans-serif", color: COLORS.ink }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 10 }}>
                 <button
                   onClick={guardarBloque}
                   disabled={!nuevoInicio || !nuevoFin}
                   style={{
-                    padding: "6px 14px", borderRadius: 999, border: "none", cursor: nuevoInicio && nuevoFin ? "pointer" : "default",
+                    padding: "7px 16px", borderRadius: 999, border: "none", cursor: nuevoInicio && nuevoFin ? "pointer" : "default",
                     background: COLORS.pine, color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 600,
                     opacity: nuevoInicio && nuevoFin ? 1 : 0.5,
                   }}
