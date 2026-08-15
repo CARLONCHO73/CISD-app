@@ -235,7 +235,7 @@ function esMarcaAusente(valor) {
 // día (el registro se guarda en el perfil del docente).
 function franjaHorariaActual() {
   const h = new Date().getHours();
-  if (h >= 5 && h < 13) return "manana";
+  if (h >= 7 && h < 13) return "manana";
   if (h >= 13 && h < 19) return "tarde";
   return "noche";
 }
@@ -6763,6 +6763,15 @@ function CISDNavegacion() {
             const franjas = mismaFecha ? [...(prev.franjas || []), franjaHoy] : [franjaHoy];
             return { fecha: hoyISO(), franjas };
           });
+          // Cada vez que arranca una franja nueva (mañana/tarde/noche),
+          // la app vuelve a "Mis colegios" por prolijidad, aunque el
+          // docente haya quedado en otro lugar la vez anterior. Dentro de
+          // la misma franja, "recordar el último lugar" sigue funcionando
+          // normal (este reseteo solo pasa una vez por franja, al ver el
+          // saludo).
+          setColegioId(null);
+          setCursoId(null);
+          setFichaAlumnoId(null);
         }}
       />
     );
