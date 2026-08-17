@@ -3295,6 +3295,8 @@ function CorreccionMasiva({ alumnos, criteriosInstancias, periodo, instanciasPor
     const evs = (alumno.eventos || []).filter((e) => e.criterioId === criterioId && e.instanciaId === instanciaId && e.periodo === periodo);
     return evs.length ? evs[evs.length - 1].valor : "";
   }
+  const [chequearAlFinal, setChequearAlFinal] = useState(false);
+
   function guardar(alumno, valorCrudo, index) {
     if (valorCrudo === "" || valorCrudo == null) return;
     const normalizado = valorCrudo.trim();
@@ -3302,6 +3304,7 @@ function CorreccionMasiva({ alumnos, criteriosInstancias, periodo, instanciasPor
     const max = (criterioActual && criterioActual.max) || 10;
     if (Number.isNaN(num) || num < 0 || num > max) return;
     onGuardar(alumno.id, criterioId, normalizado, instanciaId);
+    if (index === alumnos.length - 1) setChequearAlFinal(true);
     const siguiente = inputsRef.current[index + 1];
     if (siguiente) siguiente.focus();
   }
@@ -3310,6 +3313,7 @@ function CorreccionMasiva({ alumnos, criteriosInstancias, periodo, instanciasPor
   // siguiente casillero, igual que al guardar una nota numérica.
   function guardarAusente(alumno, index) {
     onGuardar(alumno.id, criterioId, AUSENTE, instanciaId);
+    if (index === alumnos.length - 1) setChequearAlFinal(true);
     const siguiente = inputsRef.current[index + 1];
     if (siguiente) siguiente.focus();
   }
@@ -3329,6 +3333,16 @@ function CorreccionMasiva({ alumnos, criteriosInstancias, periodo, instanciasPor
       return !Number.isNaN(num) && num < min;
     });
   }
+  // Apenas se termina de cargar el último alumno de la lista, el resumen
+  // aparece solo, sin que el docente tenga que acordarse de tocar "Listo".
+  // Se espera a que `alumnos` refleje el último guardado (useEffect corre
+  // después del re-render) para no calcular con datos viejos.
+  useEffect(() => {
+    if (!chequearAlFinal) return;
+    setChequearAlFinal(false);
+    if (alumnosBajoNota().length > 0) setResumenAbierto(true);
+  }, [chequearAlFinal, alumnos]);
+
   function tocarListo() {
     if (alumnosBajoNota().length === 0) { onCerrar(); return; }
     setResumenAbierto(true);
