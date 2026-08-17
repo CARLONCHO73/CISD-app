@@ -4734,21 +4734,70 @@ function construirBloqueAlumnoHTML({ alumno, colegio, curso, cuatrimestres, crit
 // PLANILLA DE CALIFICACIONES COMPLETA — genera un documento Word con la
 // grilla entera del curso (todos los alumnos, las 7 columnas oficiales),
 // tal como se ve en PantallaPlanillaNotas, lista para imprimir o archivar.
+// Abreviaturas cortas para que los encabezados entren bien en formato
+// vertical, sin perder claridad.
+const ABREVIATURA_COLUMNA = {
+  inf1c1: "1°i", inf2c1: "2°i", cuat1: "I",
+  inf1c2: "1°i", inf2c2: "2°i", cuat2: "II",
+  nota: "Nota",
+};
+
 function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto }) {
   const fechaEmision = fechaEmisionHoy();
-  const encabezados = columnas.map((c) => `<th>${escapeHtml(c.label)}</th>`).join("");
+  const encabezados = columnas.map((c) => `<th class="${c.tipo === "cuat" ? "th-cuat" : ""}">${escapeHtml(ABREVIATURA_COLUMNA[c.key] || c.label)}</th>`).join("");
+
+  // Ancho de la columna "Alumno", calculado según el nombre más largo del
+  // curso, para no desperdiciar ni faltar espacio.
+  const nombreMasLargo = alumnos.reduce((max, a) => Math.max(max, (a.nombre || "").length), 8);
+  const anchoNombrePx = Math.max(nombreMasLargo * 5.4 + 14, 55);
 
   const filas = alumnos.map((al, i) => {
     const { valores } = notasConPromedios(al.notasOficiales, promedioAuto);
     const celdas = columnas.map((c) => {
       const valor = valores[c.key] || "";
-      if (!valor) return `<td class="celda-vacia">—</td>`;
-      if (esMarcaAusente(valor)) return `<td style="color:${COLORS.notaRoja};font-weight:700;">Aus</td>`;
+      const claseCuat = c.tipo === "cuat" ? " td-cuat" : "";
+      if (!valor) return `<td class="celda-vacia${claseCuat}">—</td>`;
+      if (esMarcaAusente(valor)) return `<td class="${claseCuat.trim()}" style="color:${COLORS.notaRoja};font-weight:700;">Aus</td>`;
       const color = c.tipo === "nota" ? colorNota(valor, notaAprobacion) : COLORS.ink;
       const negrita = c.tipo === "nota" ? 700 : 400;
-      return `<td style="color:${color};font-weight:${negrita};">${escapeHtml(valor)}</td>`;
+      return `<td class="${claseCuat.trim()}" style="color:${color};font-weight:${negrita};">${escapeHtml(valor)}</td>`;
     }).join("");
-    return `<tr><td class="col-num">${i + 1}</td><td class="col-nombre">${escapeHtml(al.nombre)}</td>${celdas}</tr>`;
+
+    // Diciembre / Febrero / Nota Final: transcripción de lo ya cargado en
+    // las pantallas de Recuperatorio, con esta lógica — si el alumno ya
+    // aprobó con la nota regular (≥ nota mínima), Dic y Feb se marcan con
+    // una raya (no corresponde) y la Nota Final repite la nota regular.
+    // Si no aprobó, se van completando con lo que haya en cada instancia;
+    // las celdas sin cargar todavía quedan en blanco (no "pendiente").
+    const notaRegular = valores["nota"] || "";
+    const numNotaRegular = Number(String(notaRegular).replace(",", "."));
+    const aprobadoRegular = notaRegular && !esMarcaAusente(notaRegular) && !Number.isNaN(numNotaRegular) && numNotaRegular >= (notaAprobacion || 6);
+
+    function celdaResultado(valor) {
+      if (!valor) return `<td class="celda-pendiente"></td>`;
+      if (esMarcaAusente(valor)) return `<td style="color:${COLORS.notaRoja};font-weight:700;">Aus</td>`;
+      return `<td style="color:${colorNota(valor, notaAprobacion)};font-weight:700;">${escapeHtml(valor)}</td>`;
+    }
+
+    let celdaDic, celdaFeb, celdaFinal;
+    if (aprobadoRegular) {
+      celdaDic = `<td class="celda-raya">—</td>`;
+      celdaFeb = `<td class="celda-raya">—</td>`;
+      celdaFinal = celdaResultado(notaRegular);
+    } else {
+      const dic = al.notaDiciembre || "";
+      const feb = al.notaFebrero || "";
+      const dicAusente = esMarcaAusente(dic);
+      const numDic = Number(String(dic).replace(",", "."));
+      const dicAprobado = dic && !dicAusente && !Number.isNaN(numDic) && numDic >= (notaAprobacion || 6);
+
+      celdaDic = celdaResultado(dic);
+      celdaFeb = dicAprobado ? `<td class="celda-raya">—</td>` : celdaResultado(feb);
+      const notaFinalValor = dicAprobado ? dic : (feb || "");
+      celdaFinal = celdaResultado(notaFinalValor);
+    }
+
+    return `<tr><td class="col-num">${i + 1}</td><td class="col-nombre">${escapeHtml(al.nombre)}</td>${celdas}${celdaDic}${celdaFeb}${celdaFinal}</tr>`;
   }).join("\n");
 
   return `<!DOCTYPE html>
@@ -4757,23 +4806,28 @@ function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, nota
 <meta charset="utf-8" />
 <title>Planilla de ${escapeHtml(curso.nombre)}; ${escapeHtml(colegio.nombre)}</title>
 <style>
-  @page { size: A4 landscape; margin: 12mm; }
-  body { font-family: Arial, sans-serif; color: ${COLORS.ink}; }
-  h1 { font-size: 15pt; margin: 0 0 2px 0; }
-  .meta { font-size: 10pt; color: ${COLORS.inkSoft}; margin-bottom: 14px; }
+  @page { size: A4; margin: 10mm; }
+  * { box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; color: ${COLORS.ink}; margin: 0; }
+  h1 { font-size: 14pt; margin: 0 0 2px 0; }
+  .meta { font-size: 9pt; color: ${COLORS.inkSoft}; margin-bottom: 10px; }
   table { border-collapse: collapse; width: 100%; }
-  th, td { border: 1px solid ${COLORS.line}; padding: 5px 6px; font-size: 9.5pt; text-align: center; }
-  th { background: ${COLORS.pineDark}; color: ${COLORS.white}; }
-  .col-nombre { text-align: left; font-weight: 700; }
-  .col-num { color: #999; font-size: 8.5pt; }
+  th, td { border: 1px solid ${COLORS.line}; padding: 4px 3px; font-size: 8.3pt; text-align: center; }
+  th { background: ${COLORS.pineDark}; color: ${COLORS.white}; font-size: 8pt; }
+  .col-nombre { text-align: left; font-weight: 700; width: ${anchoNombrePx}px; }
+  .col-num { color: #999; font-size: 7.5pt; width: 16px; }
   .celda-vacia { color: #bbb; }
+  .celda-raya { color: #bbb; }
+  .celda-pendiente { color: #bbb; }
+  .th-cuat { background: #234a3e; }
+  .td-cuat { background: #EDEDED; }
 </style>
 </head>
 <body>
 <h1>Planilla de Calificaciones</h1>
 <div class="meta">${escapeHtml(colegio.nombre)} · ${escapeHtml(curso.nombre)}${curso.materia ? " · " + escapeHtml(curso.materia) : ""} · Emitido ${fechaEmision}</div>
 <table>
-<tr><th></th><th>Alumno</th>${encabezados}</tr>
+<tr><th></th><th>Alumno</th>${encabezados}<th>Dic</th><th>Feb</th><th>Final</th></tr>
 ${filas}
 </table>
 </body>
