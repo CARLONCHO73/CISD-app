@@ -2393,6 +2393,7 @@ function FilaHistorial({ ev, etiqueta, revelado, onLongPress, onBorrar, onEditar
       <span style={{ maxWidth: "62%" }}>
         {etiqueta ? <b>{etiqueta}: </b> : null}
         <ValorEventoTexto ev={ev} notaAprobacion={notaAprobacion} />
+        {ev.comentario ? <span style={{ color: COLORS.ochre, fontStyle: "italic" }}> · {ev.comentario}</span> : null}
       </span>
       {revelado ? (
         confirmando ? (
@@ -2440,11 +2441,70 @@ function MiniHistorial({ eventos, onBorrar, onEditar, etiquetaPorEvento, notaApr
   );
 }
 
+const FRASES_REFORZAR = ["Repasar contenido", "Faltó práctica", "Bien, seguir así"];
+
+// Comentario corto y opcional "para reforzar", pegado a una nota puntual.
+// Discreto por defecto (un link chico); si ya hay algo guardado, lo
+// muestra en su lugar. No obliga a nada, es un extra que el docente
+// puede usar o ignorar sin que cambie el flujo normal de carga.
+function AgregarReforzar({ comentarioActual, onGuardar }) {
+  const [abierto, setAbierto] = useState(false);
+  const [texto, setTexto] = useState("");
+
+  if (!abierto) {
+    if (comentarioActual) {
+      return (
+        <div
+          onClick={() => { setTexto(comentarioActual); setAbierto(true); }}
+          style={{ marginTop: 6, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, color: COLORS.ochre, cursor: "pointer" }}
+        >
+          → Reforzar: {comentarioActual} <span style={{ textDecoration: "underline" }}>editar</span>
+        </div>
+      );
+    }
+    return (
+      <div
+        onClick={() => { setTexto(""); setAbierto(true); }}
+        style={{ marginTop: 6, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, fontWeight: 600, color: COLORS.inkSoft, cursor: "pointer", textDecoration: "underline dotted" }}
+      >
+        + Agregar algo para reforzar
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginTop: 6, padding: 8, background: COLORS.paperDim, borderRadius: 10 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 6 }}>
+        {FRASES_REFORZAR.map((f) => (
+          <span
+            key={f} onClick={() => setTexto(f)}
+            style={{ padding: "4px 8px", borderRadius: 999, border: `1px solid ${texto === f ? COLORS.pine : COLORS.line}`, background: texto === f ? COLORS.pine : COLORS.white, color: texto === f ? COLORS.white : COLORS.ink, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, cursor: "pointer" }}
+          >
+            {f}
+          </span>
+        ))}
+      </div>
+      <input
+        value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Escribir…" autoFocus
+        onKeyDown={(e) => { if (e.key === "Enter") { onGuardar(texto.trim()); setAbierto(false); } }}
+        style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${COLORS.line}`, borderRadius: 8, padding: "6px 8px", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, marginBottom: 6 }}
+      />
+      <div style={{ display: "flex", gap: 6 }}>
+        <span onClick={() => { onGuardar(texto.trim()); setAbierto(false); }} style={{ ...chipBase, color: COLORS.white, background: COLORS.pine }}>Guardar</span>
+        <span onClick={() => setAbierto(false)} style={{ ...chipBase, color: COLORS.inkSoft, background: COLORS.white }}>Cancelar</span>
+        {comentarioActual && (
+          <span onClick={() => { onGuardar(""); setAbierto(false); }} style={{ ...chipBase, color: COLORS.rose, background: COLORS.white }}>Quitar</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Evaluación escrita: instancias con nombre propio. Cargar una nota
 // nueva sobre una instancia ya calificada la reemplaza directamente
 // (upsert); el recuperatorio se agrega aparte, tocando la nota ya
 // registrada en el historial de abajo.
-function CampoEvaluaciones({ alumno, criterio, periodo, instancias, notaAprobacion, onGuardar, onAgregarInstancia, onEditarInstancia, onBorrarInstancia, onBorrar, onSetRecuperatorio }) {
+function CampoEvaluaciones({ alumno, criterio, periodo, instancias, notaAprobacion, onGuardar, onGuardarComentario, onAgregarInstancia, onEditarInstancia, onBorrarInstancia, onBorrar, onSetRecuperatorio }) {
   const [seleccion, setSeleccion] = useState(null);
   const [agregando, setAgregando] = useState(instancias.length === 0);
   const [nombreNuevo, setNombreNuevo] = useState("");
@@ -2457,6 +2517,10 @@ function CampoEvaluaciones({ alumno, criterio, periodo, instancias, notaAprobaci
   function valorPrevio(instanciaId) {
     const ev = eventosEval.find((e) => e.instanciaId === instanciaId);
     return ev ? ev.valor : null;
+  }
+  function comentarioPrevio(instanciaId) {
+    const ev = eventosEval.find((e) => e.instanciaId === instanciaId);
+    return ev && ev.comentario ? ev.comentario : "";
   }
   function confirmarNuevaInstancia() {
     const nombre = nombreNuevo.trim();
@@ -2565,6 +2629,12 @@ function CampoEvaluaciones({ alumno, criterio, periodo, instancias, notaAprobaci
       {seleccion && !accion && (
         <div style={{ marginTop: 10 }} key={seleccion}>
           <CampoNumerico max={criterio.max || 10} valorActual={valorPrevio(seleccion)} notaAprobacion={notaAprobacion} onGuardar={(v) => onGuardar(seleccion, v)} />
+          {valorPrevio(seleccion) != null && (
+            <AgregarReforzar
+              comentarioActual={comentarioPrevio(seleccion)}
+              onGuardar={(texto) => onGuardarComentario(seleccion, texto)}
+            />
+          )}
         </div>
       )}
 
@@ -2616,7 +2686,7 @@ function CampoAsistenciaResumen({ alumno, diasCurso, compacto }) {
   );
 }
 
-function CampoCriterio({ alumno, criterio, periodo, instancias, notaAprobacion, diasCurso, onGuardarEvento, onGuardarNotaInstancia, onAgregarInstancia, onEditarInstancia, onBorrarInstancia, onBorrarEvento, onEditarEvento, onSetRecuperatorio }) {
+function CampoCriterio({ alumno, criterio, periodo, instancias, notaAprobacion, diasCurso, onGuardarEvento, onGuardarNotaInstancia, onGuardarComentarioInstancia, onAgregarInstancia, onEditarInstancia, onBorrarInstancia, onBorrarEvento, onEditarEvento, onSetRecuperatorio }) {
   if (criterio.tipo === "asistencia") {
     return <CampoAsistenciaResumen alumno={alumno} diasCurso={diasCurso} />;
   }
@@ -2659,6 +2729,7 @@ function CampoCriterio({ alumno, criterio, periodo, instancias, notaAprobacion, 
     <CampoEvaluaciones
       alumno={alumno} criterio={criterio} periodo={periodo} instancias={instancias || []} notaAprobacion={notaAprobacion}
       onGuardar={(instanciaId, valor) => onGuardarNotaInstancia(criterio.id, instanciaId, valor)}
+      onGuardarComentario={(instanciaId, comentario) => onGuardarComentarioInstancia(criterio.id, instanciaId, comentario)}
       onAgregarInstancia={(nombre) => onAgregarInstancia(criterio.id, nombre)}
       onEditarInstancia={onEditarInstancia ? (instanciaId, nombre) => onEditarInstancia(criterio.id, instanciaId, nombre) : null}
       onBorrarInstancia={onBorrarInstancia ? (instanciaId) => onBorrarInstancia(criterio.id, instanciaId) : null}
@@ -2959,7 +3030,7 @@ function ModalHistorial({ alumno, criterios, cursoId, ordenPorCurso, onReordenar
   );
 }
 
-function PantallaFichaAlumno({ colegio, curso, alumno, periodo, criteriosActivos, todosLosCriterios, ordenPorCurso, onReordenarCriterios, instanciasPorCriterio, notaAprobacion, diasCurso, onGuardarEvento, onGuardarNotaInstancia, onAgregarInstancia, onEditarInstancia, onBorrarInstancia, onBorrarEvento, onEditarEvento, onSetRecuperatorio, onCambiarNotaOficial, nombresColumnasPorColegio, onVolver, tourVisto, onMarcarTourVisto, promedioAuto, onTogglePromedioAuto }) {
+function PantallaFichaAlumno({ colegio, curso, alumno, periodo, criteriosActivos, todosLosCriterios, ordenPorCurso, onReordenarCriterios, instanciasPorCriterio, notaAprobacion, diasCurso, onGuardarEvento, onGuardarNotaInstancia, onGuardarComentarioInstancia, onAgregarInstancia, onEditarInstancia, onBorrarInstancia, onBorrarEvento, onEditarEvento, onSetRecuperatorio, onCambiarNotaOficial, nombresColumnasPorColegio, onVolver, tourVisto, onMarcarTourVisto, promedioAuto, onTogglePromedioAuto }) {
   const activosOrdenados = ordenarCriteriosPorCurso(criteriosActivos, curso.id, ordenPorCurso);
   const coloresPorCriterio = asignarColoresSinRepetir(activosOrdenados);
   const mapaCriterios = new Map(activosOrdenados.map((c) => [c.id, c]));
@@ -3033,6 +3104,7 @@ function PantallaFichaAlumno({ colegio, curso, alumno, periodo, criteriosActivos
                         diasCurso={diasCurso}
                         onGuardarEvento={(criterioId, valor, extra) => onGuardarEvento(alumno.id, criterioId, valor, extra)}
                         onGuardarNotaInstancia={(criterioId, instanciaId, valor) => onGuardarNotaInstancia(alumno.id, criterioId, instanciaId, valor)}
+                        onGuardarComentarioInstancia={(criterioId, instanciaId, comentario) => onGuardarComentarioInstancia(alumno.id, criterioId, instanciaId, comentario)}
                         onAgregarInstancia={onAgregarInstancia}
                         onEditarInstancia={onEditarInstancia}
                         onBorrarInstancia={onBorrarInstancia}
@@ -3199,13 +3271,14 @@ function FilaCorreccionMasivaAlumno({ alumno, valorGuardado, inputRef, onGuardar
   );
 }
 
-function CorreccionMasiva({ alumnos, criteriosInstancias, periodo, instanciasPorCriterio, onGuardar, onAgregarInstancia, onEditarInstancia, onBorrarInstancia, onCerrar }) {
+function CorreccionMasiva({ alumnos, criteriosInstancias, periodo, instanciasPorCriterio, notaAprobacion, onGuardar, onGuardarComentario, onAgregarInstancia, onEditarInstancia, onBorrarInstancia, onCerrar }) {
   const [criterioId, setCriterioId] = useState(criteriosInstancias.length ? criteriosInstancias[0].id : null);
   const [instanciaId, setInstanciaId] = useState(null);
   const [agregando, setAgregando] = useState(false);
   const [nombreNuevo, setNombreNuevo] = useState("");
   const [accion, setAccion] = useState(null); // null | "editar" | "borrar"
   const [nombreEditado, setNombreEditado] = useState("");
+  const [resumenAbierto, setResumenAbierto] = useState(false);
   const inputsRef = useRef([]);
 
   const criterioActual = criteriosInstancias.find((c) => c.id === criterioId) || null;
@@ -3243,6 +3316,23 @@ function CorreccionMasiva({ alumnos, criteriosInstancias, periodo, instanciasPor
   function quitarAusente(alumno) {
     onGuardar(alumno.id, criterioId, "", instanciaId);
   }
+  // Alumnos que quedaron con nota por debajo de la mínima de aprobación,
+  // en la instancia actual — son los que tiene sentido revisar antes de
+  // cerrar la carga masiva (los ausentes no cuentan, no hay nota que
+  // "reforzar" todavía).
+  function alumnosBajoNota() {
+    const min = notaAprobacion || 6;
+    return alumnos.filter((a) => {
+      const v = valorActual(a);
+      if (!v || esMarcaAusente(v)) return false;
+      const num = Number(String(v).replace(",", "."));
+      return !Number.isNaN(num) && num < min;
+    });
+  }
+  function tocarListo() {
+    if (alumnosBajoNota().length === 0) { onCerrar(); return; }
+    setResumenAbierto(true);
+  }
   function confirmarNuevaInstancia() {
     const nombre = nombreNuevo.trim();
     if (!nombre) return;
@@ -3270,7 +3360,10 @@ function CorreccionMasiva({ alumnos, criteriosInstancias, periodo, instanciasPor
           <div style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 600 }}>
             <ClipboardList size={18} strokeWidth={2.2} /> Carga rápida de notas
           </div>
-          <span onClick={onCerrar} style={{ cursor: "pointer", fontSize: 20 }}>×</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+            <span onClick={tocarListo} style={{ cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, fontWeight: 700, color: COLORS.ochreSoft }}>Listo ✓</span>
+            <span onClick={onCerrar} style={{ cursor: "pointer", fontSize: 20 }}>×</span>
+          </div>
         </div>
         <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: COLORS.ochreSoft, marginTop: 4 }}>
           {periodo}° Cuatrimestre · Enter guarda y avanza al siguiente.
@@ -3369,6 +3462,43 @@ function CorreccionMasiva({ alumnos, criteriosInstancias, periodo, instanciasPor
       ) : (
         <div style={{ padding: "30px 16px", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: COLORS.inkSoft, fontStyle: "italic", textAlign: "center" }}>
           Creá o elegí una instancia para empezar a cargar notas.
+        </div>
+      )}
+
+      {resumenAbierto && (
+        <div style={{ position: "fixed", inset: 0, background: COLORS.paper, zIndex: 70, display: "flex", flexDirection: "column" }}>
+          <div style={{ background: COLORS.pineDark, color: COLORS.white, padding: "16px 18px" }}>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 600 }}>Antes de terminar…</div>
+            <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: COLORS.ochreSoft, marginTop: 4 }}>
+              {alumnosBajoNota().length} alumno{alumnosBajoNota().length === 1 ? "" : "s"} quedaron con nota por debajo de {notaAprobacion || 6}. ¿Querés dejarles algo para reforzar?
+            </div>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto", padding: "12px 16px 24px 16px" }}>
+            {alumnosBajoNota().map((a) => {
+              const evs = (a.eventos || []).filter((e) => e.criterioId === criterioId && e.instanciaId === instanciaId && e.periodo === periodo);
+              const comentarioActual = evs.length && evs[evs.length - 1].comentario ? evs[evs.length - 1].comentario : "";
+              return (
+                <div key={a.id} style={{ marginBottom: 14, paddingBottom: 12, borderBottom: `1px solid ${COLORS.line}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                    <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, fontWeight: 600, color: COLORS.ink }}>{a.nombre}</span>
+                    <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 14, fontWeight: 700, color: COLORS.notaRoja }}>{valorActual(a)}</span>
+                  </div>
+                  <AgregarReforzar
+                    comentarioActual={comentarioActual}
+                    onGuardar={(texto) => onGuardarComentario(a.id, criterioId, instanciaId, texto)}
+                  />
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ padding: "12px 16px", borderTop: `1px solid ${COLORS.line}`, display: "flex", gap: 10 }}>
+            <button onClick={() => setResumenAbierto(false)} style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: `1px solid ${COLORS.line}`, background: COLORS.white, color: COLORS.inkSoft, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, fontWeight: 600, cursor: "pointer" }}>
+              Volver a la carga
+            </button>
+            <button onClick={onCerrar} style={{ flex: 1, padding: "10px 0", borderRadius: 10, border: "none", background: COLORS.pine, color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, fontWeight: 700, cursor: "pointer" }}>
+              Terminar
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -4539,7 +4669,7 @@ function construirBloqueAlumnoHTML({ alumno, colegio, curso, cuatrimestres, crit
       }
     }
     criteriosSeguimiento.forEach((crit) => {
-      interno += `<div class="bloque-item"><div class="criterio-nombre">${escapeHtml(crit.nombre)}</div>${historialCriterioHTML(alumno, crit, periodo, instanciasPorCriterio[crit.id], notaAprobacion)}</div>`;
+      interno += `<div class="bloque-item"><div class="criterio-nombre">${escapeHtml(crit.nombre)} <span class="asterisco-incluido">*</span></div>${historialCriterioHTML(alumno, crit, periodo, instanciasPorCriterio[crit.id], notaAprobacion)}</div>`;
     });
     return `<td class="columna">
       <div class="columna-titulo">${periodo}° cuatrimestre</div>
@@ -4561,7 +4691,7 @@ function construirBloqueAlumnoHTML({ alumno, colegio, curso, cuatrimestres, crit
     ? `<div class="asistencia-linea"><b>Asistencia al ${fechaEmision}:</b> ${resumenAsistenciaTexto(alumno, diasCurso)}</div>`
     : "";
 
-  return `<div class="bloque-alumno">
+  return `<table class="bloque-alumno-tbl"><tr><td class="bloque-alumno">
     <div class="bloque-header">
       <div>
         <div class="alumno-nombre">${escapeHtml(alumno.nombre)}</div>
@@ -4572,7 +4702,7 @@ function construirBloqueAlumnoHTML({ alumno, colegio, curso, cuatrimestres, crit
     <table class="tabla-columnas"><tr>${celdas.join("")}</tr></table>
     ${notaFinalHTML}
     ${asistenciaHTML}
-  </div>`;
+  </td></tr></table>`;
 }
 
 // PLANILLA DE CALIFICACIONES COMPLETA — genera un documento Word con la
@@ -4636,36 +4766,38 @@ function construirHTMLInformes({ alumnosSeleccionados, colegio, curso, cuatrimes
 <meta charset="utf-8" />
 <title>Informe de ${escapeHtml(curso.nombre)}; ${escapeHtml(colegio.nombre)}</title>
 <style>
-  @page { size: A4; margin: 14mm 12mm; }
+  @page { size: A4; margin: 12mm 12mm; }
   * { box-sizing: border-box; }
-  body { font-family: Calibri, Carlito, Arial, sans-serif; font-size: 11pt; color: #222; margin: 0; }
-  .bloque-alumno { border: 1px solid #ccc; border-radius: 4px; padding: 10px 14px 12px 14px; margin-bottom: 12px; break-inside: avoid; page-break-inside: avoid; }
-  .bloque-alumno:nth-of-type(2n) { page-break-after: always; break-after: page; }
-  .bloque-alumno:last-of-type { page-break-after: auto; break-after: auto; }
-  .bloque-header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid #ddd; padding-bottom: 6px; margin-bottom: 8px; }
-  .alumno-nombre { font-size: 13pt; font-weight: 700; }
-  .bloque-meta { color: #555; font-size: 10pt; }
-  .bloque-fecha { color: #555; font-size: 9.5pt; text-align: right; }
+  body { font-family: Calibri, Carlito, Arial, sans-serif; font-size: 8.8pt; color: #222; margin: 0; }
+  .bloque-alumno-tbl { width: 100%; border-collapse: collapse; margin-bottom: 5px; }
+  .bloque-alumno { border: 1px solid #ccc; border-radius: 4px; padding: 6px 9px 6px 9px; break-inside: avoid; page-break-inside: avoid; }
+  .bloque-header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid #ddd; padding-bottom: 3px; margin-bottom: 4px; }
+  .alumno-nombre { font-size: 11.5pt; font-weight: 700; }
+  .bloque-meta { color: #555; font-size: 8.5pt; }
+  .bloque-fecha { color: #555; font-size: 8pt; text-align: right; }
   .tabla-columnas { width: 100%; border-collapse: collapse; }
-  .tabla-columnas td.columna { vertical-align: top; padding: 0 8px; width: 50%; border-left: 1px solid #e2e2e2; }
+  .tabla-columnas td.columna { vertical-align: top; padding: 0 6px; width: 50%; border-left: 1px solid #e2e2e2; }
   .tabla-columnas td.columna:first-child { border-left: none; padding-left: 0; }
-  .tabla-notas-oficiales { border-collapse: collapse; margin-top: 3px; }
-  .tabla-notas-oficiales th, .tabla-notas-oficiales td { border: 1px solid #ddd; padding: 3px 7px; font-size: 9.5pt; text-align: center; }
+  .tabla-notas-oficiales { border-collapse: collapse; margin-top: 2px; }
+  .tabla-notas-oficiales th, .tabla-notas-oficiales td { border: 1px solid #ddd; padding: 2px 5px; font-size: 8.5pt; text-align: center; }
   .tabla-notas-oficiales th { background: #eee; color: #555; font-weight: 600; }
   .tabla-notas-oficiales td.muted { color: #999; font-style: italic; }
-  .prom-marca { font-style: italic; font-weight: 400; font-size: 8.5pt; }
-  .columna-titulo { font-weight: 700; color: #555; font-size: 10pt; margin-bottom: 4px; }
-  .bloque-item { margin-bottom: 6px; }
+  .prom-marca { font-style: italic; font-weight: 400; font-size: 7.5pt; }
+  .columna-titulo { font-weight: 700; color: #555; font-size: 9pt; margin-bottom: 3px; }
+  .bloque-item { margin-bottom: 2.5px; }
   .criterio-nombre { font-weight: 600; }
-  .registro { color: #444; font-size: 10pt; }
-  .registro-fecha { color: #888; font-size: 9pt; margin-right: 3px; }
+  .asterisco-incluido { color: #C0392B; font-weight: 700; }
+  .registro { color: #444; font-size: 9pt; }
+  .registro-fecha { color: #888; font-size: 8pt; margin-right: 3px; }
   .muted { color: #999; font-style: italic; }
-  .nota-final { margin-top: 6px; font-weight: 700; }
-  .asistencia-linea { margin-top: 6px; font-size: 10pt; }
+  .nota-final { margin-top: 4px; font-weight: 700; }
+  .asistencia-linea { margin-top: 4px; font-size: 9pt; }
+  .nota-asterisco { margin-top: 8px; font-size: 7.5pt; color: #888; font-style: italic; }
 </style>
 </head>
 <body>
 ${bloques}
+<div class="nota-asterisco">* Criterio de seguimiento incluido en este informe.</div>
 </body>
 </html>`;
 }
@@ -5578,7 +5710,7 @@ function PantallaHorarioDocente({ colegios, cursosPorColegio, diasClasePorCurso,
   );
 }
 
-function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno, onEditarAlumno, onAbrirFicha, onVolver, criterios, ordenPorCurso, onReordenarCriterios, onAgregarCriterio, onUsarCriterio, onUsarCriterioEnTodos, onQuitarCriterio, onEditarCriterio, onEliminarCriterioDefinitivo, periodo, onCambiarPeriodo, instanciasPorCriterio, onGuardarMasivo, onAgregarInstancia, onEditarInstancia, onBorrarInstancia, notaAprobacion, onCambiarNotaAprobacion, onCambiarNotaOficial, onCambiarNotaRecuperatorio, nombresColumnasPorColegio, onRenombrarColumnaNota, diasCurso, diasClaseConfig, onAlternarCeldaAsistencia, onAlternarTodosPresentes, onSetMotivoNoTrabajado, onSetDiasClase, tourVisto, onMarcarTourVisto, tourVistoPorPantalla, onMarcarTourVistoPantalla, promedioAuto, onTogglePromedioAuto }) {
+function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno, onEditarAlumno, onAbrirFicha, onVolver, criterios, ordenPorCurso, onReordenarCriterios, onAgregarCriterio, onUsarCriterio, onUsarCriterioEnTodos, onQuitarCriterio, onEditarCriterio, onEliminarCriterioDefinitivo, periodo, onCambiarPeriodo, instanciasPorCriterio, onGuardarMasivo, onGuardarComentarioMasivo, onAgregarInstancia, onEditarInstancia, onBorrarInstancia, notaAprobacion, onCambiarNotaAprobacion, onCambiarNotaOficial, onCambiarNotaRecuperatorio, nombresColumnasPorColegio, onRenombrarColumnaNota, diasCurso, diasClaseConfig, onAlternarCeldaAsistencia, onAlternarTodosPresentes, onSetMotivoNoTrabajado, onSetDiasClase, tourVisto, onMarcarTourVisto, tourVistoPorPantalla, onMarcarTourVistoPantalla, promedioAuto, onTogglePromedioAuto }) {
   const [busqueda, setBusqueda] = useState("");
   const [masivaAbierta, setMasivaAbierta] = useState(false);
   const [planillaAbierta, setPlanillaAbierta] = useState(false);
@@ -5750,7 +5882,9 @@ function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno
           criteriosInstancias={criteriosInstancias}
           periodo={periodo}
           instanciasPorCriterio={instanciasPorCriterio}
+          notaAprobacion={notaAprobacion}
           onGuardar={onGuardarMasivo}
+          onGuardarComentario={onGuardarComentarioMasivo}
           onAgregarInstancia={onAgregarInstancia}
           onEditarInstancia={onEditarInstancia}
           onBorrarInstancia={onBorrarInstancia}
@@ -6626,6 +6760,25 @@ function CISDNavegacion() {
     });
   }
 
+  // Comentario opcional "para reforzar", pegado a una nota de instancia ya
+  // registrada (no crea un evento nuevo, solo le agrega/edita ese campo al
+  // que ya existe). Un texto vacío borra el comentario.
+  function guardarComentarioInstancia(curId, alumnoId, criterioId, instanciaId, comentario) {
+    const periodo = periodoPorCurso[curId] || "1";
+    setAlumnosPorCurso((prev) => ({
+      ...prev,
+      [curId]: (prev[curId] || []).map((a) => {
+        if (a.id !== alumnoId) return a;
+        const eventos = a.eventos || [];
+        const idx = eventos.findIndex((e) => e.criterioId === criterioId && e.instanciaId === instanciaId && e.periodo === periodo);
+        if (idx < 0) return a;
+        const copia = [...eventos];
+        copia[idx] = { ...copia[idx], comentario: comentario || undefined };
+        return { ...a, eventos: copia };
+      }),
+    }));
+  }
+
   // Adjunta (o edita) el recuperatorio de una nota ya registrada. Comparte
   // la misma fecha del registro original, porque no se toca `.fecha`.
   function setRecuperatorio(curId, alumnoId, eventoId, valor) {
@@ -7023,6 +7176,7 @@ function CISDNavegacion() {
             onCambiarPeriodo={(p) => setPeriodoCurso(cursoActual.id, p)}
             instanciasPorCriterio={instanciasPorCurso[cursoActual.id] || {}}
             onGuardarMasivo={(alumnoId, criterioId, valor, instanciaId) => guardarNotaInstancia(cursoActual.id, alumnoId, criterioId, instanciaId, valor)}
+            onGuardarComentarioMasivo={(alumnoId, criterioId, instanciaId, comentario) => guardarComentarioInstancia(cursoActual.id, alumnoId, criterioId, instanciaId, comentario)}
             onAgregarInstancia={(criterioId, nombre) => agregarInstanciaEvaluacion(cursoActual.id, criterioId, nombre)}
             onEditarInstancia={(criterioId, instanciaId, nombre) => editarInstanciaEvaluacion(cursoActual.id, criterioId, instanciaId, nombre)}
             onBorrarInstancia={(criterioId, instanciaId) => borrarInstanciaEvaluacion(cursoActual.id, criterioId, instanciaId)}
@@ -7062,6 +7216,7 @@ function CISDNavegacion() {
             diasCurso={asistenciaPorCurso[cursoActual.id] || {}}
             onGuardarEvento={(alumnoId, criterioId, valor, extra) => guardarEvento(cursoActual.id, alumnoId, criterioId, valor, extra)}
             onGuardarNotaInstancia={(alumnoId, criterioId, instanciaId, valor) => guardarNotaInstancia(cursoActual.id, alumnoId, criterioId, instanciaId, valor)}
+            onGuardarComentarioInstancia={(alumnoId, criterioId, instanciaId, comentario) => guardarComentarioInstancia(cursoActual.id, alumnoId, criterioId, instanciaId, comentario)}
             onAgregarInstancia={(criterioId, nombre) => agregarInstanciaEvaluacion(cursoActual.id, criterioId, nombre)}
             onEditarInstancia={(criterioId, instanciaId, nombre) => editarInstanciaEvaluacion(cursoActual.id, criterioId, instanciaId, nombre)}
             onBorrarInstancia={(criterioId, instanciaId) => borrarInstanciaEvaluacion(cursoActual.id, criterioId, instanciaId)}
