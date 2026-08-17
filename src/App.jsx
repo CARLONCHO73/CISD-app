@@ -4683,7 +4683,7 @@ function construirBloqueAlumnoHTML({ alumno, colegio, curso, cuatrimestres, crit
       }
     }
     criteriosSeguimiento.forEach((crit) => {
-      interno += `<div class="bloque-item"><div class="criterio-nombre">${escapeHtml(crit.nombre)} <span class="asterisco-incluido">*</span></div>${historialCriterioHTML(alumno, crit, periodo, instanciasPorCriterio[crit.id], notaAprobacion)}</div>`;
+      interno += `<div class="bloque-item"><div class="criterio-nombre"><span class="asterisco-incluido">●</span>${escapeHtml(crit.nombre)}</div>${historialCriterioHTML(alumno, crit, periodo, instanciasPorCriterio[crit.id], notaAprobacion)}</div>`;
     });
     return `<td class="columna">
       <div class="columna-titulo">${periodo}° cuatrimestre</div>
@@ -4691,13 +4691,26 @@ function construirBloqueAlumnoHTML({ alumno, colegio, curso, cuatrimestres, crit
     </td>`;
   });
 
-  let notaFinalHTML = "";
+  let notaFinalTD = "";
   if (incluirNotasOficiales && cuatrimestres.length === 2) {
     const valor = notasFinales.nota || "";
     const colNota = columnasNotas.find((c) => c.key === "nota");
     if (valor) {
-      const sufijo = calculadas.has("nota") ? " <i>(promedio sugerido)</i>" : "";
-      notaFinalHTML = `<div class="nota-final">${escapeHtml(colNota ? colNota.label : "Nota final")}: <span style="color:${colorNota(valor, notaAprobacion)};font-weight:700;">${escapeHtml(valor)}</span>${sufijo}</div>`;
+      const sufijo = calculadas.has("nota") ? " (prom.)" : "";
+      const numValor = Number(String(valor).replace(",", "."));
+      const esAusenteFinal = esMarcaAusente(valor);
+      let mensajeHTML = "";
+      if (!esAusenteFinal && !Number.isNaN(numValor)) {
+        const aprobada = numValor >= (notaAprobacion || 6);
+        mensajeHTML = aprobada
+          ? `<div class="nf-mensaje nf-aprobada">¡Felicitaciones!<br/>Materia aprobada</div>`
+          : `<div class="nf-mensaje nf-recupera">Recupera<br/>en Diciembre</div>`;
+      }
+      notaFinalTD = `<td class="columna-nota">
+        <div class="nf-label">${escapeHtml(colNota ? colNota.label : "Nota final")}</div>
+        <div class="nf-valor" style="color:${colorNota(valor, notaAprobacion)};">${escapeHtml(valor)}<span class="nf-sufijo">${sufijo}</span></div>
+        ${mensajeHTML}
+      </td>`;
     }
   }
 
@@ -4713,8 +4726,7 @@ function construirBloqueAlumnoHTML({ alumno, colegio, curso, cuatrimestres, crit
       </div>
       <div class="bloque-fecha">Emitido<br/>${fechaEmision}</div>
     </div>
-    <table class="tabla-columnas"><tr>${celdas.join("")}</tr></table>
-    ${notaFinalHTML}
+    <table class="tabla-columnas"><tr>${celdas.join("")}${notaFinalTD}</tr></table>
     ${asistenciaHTML}
   </td></tr></table>`;
 }
@@ -4790,8 +4802,9 @@ function construirHTMLInformes({ alumnosSeleccionados, colegio, curso, cuatrimes
   .bloque-meta { color: #555; font-size: 8.5pt; }
   .bloque-fecha { color: #555; font-size: 8pt; text-align: right; }
   .tabla-columnas { width: 100%; border-collapse: collapse; }
-  .tabla-columnas td.columna { vertical-align: top; padding: 0 6px; width: 50%; border-left: 1px solid #e2e2e2; }
+  .tabla-columnas td.columna { vertical-align: top; padding: 0 6px; width: 39%; border-left: 1px solid #e2e2e2; }
   .tabla-columnas td.columna:first-child { border-left: none; padding-left: 0; }
+  .tabla-columnas td.columna-nota { vertical-align: top; width: 22%; padding: 0 0 0 8px; border-left: 1px solid #e2e2e2; }
   .tabla-notas-oficiales { border-collapse: collapse; margin-top: 2px; }
   .tabla-notas-oficiales th, .tabla-notas-oficiales td { border: 1px solid #ddd; padding: 2px 5px; font-size: 8.5pt; text-align: center; }
   .tabla-notas-oficiales th { background: #eee; color: #555; font-weight: 600; }
@@ -4800,18 +4813,24 @@ function construirHTMLInformes({ alumnosSeleccionados, colegio, curso, cuatrimes
   .columna-titulo { font-weight: 700; color: #555; font-size: 9pt; margin-bottom: 3px; }
   .bloque-item { margin-bottom: 2.5px; }
   .criterio-nombre { font-weight: 600; }
-  .asterisco-incluido { color: #C0392B; font-weight: 700; }
+  .asterisco-incluido { color: #222; font-weight: 700; margin-right: 3px; }
   .registro { color: #444; font-size: 9pt; }
   .registro-fecha { color: #888; font-size: 8pt; margin-right: 3px; }
   .muted { color: #999; font-style: italic; }
   .nota-final { margin-top: 4px; font-weight: 700; }
+  .nf-label { font-weight: 700; font-size: 8pt; color: #555; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px; }
+  .nf-valor { font-weight: 800; font-size: 14pt; line-height: 1; }
+  .nf-sufijo { font-size: 6.5pt; font-style: italic; color: #888; font-weight: 400; margin-left: 2px; }
+  .nf-mensaje { font-weight: 700; font-size: 8pt; margin-top: 4px; line-height: 1.25; }
+  .nf-aprobada { color: #2E7D46; }
+  .nf-recupera { color: #C0392B; }
   .asistencia-linea { margin-top: 4px; font-size: 9pt; }
   .nota-asterisco { margin-top: 8px; font-size: 7.5pt; color: #888; font-style: italic; }
 </style>
 </head>
 <body>
 ${bloques}
-<div class="nota-asterisco">* Criterio de seguimiento incluido en este informe.</div>
+<div class="nota-asterisco">● Criterio de seguimiento incluido en este informe.</div>
 </body>
 </html>`;
 }
