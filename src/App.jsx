@@ -3557,6 +3557,21 @@ function resultadoRecuperatorios(al, notaAprobacion, notaRegular) {
   return { dic: celdaDic, feb: celdaFeb, final: celda(notaFinalValor) };
 }
 
+// Checkbox propio de CISD (reemplaza al cuadradito nativo del navegador),
+// para que se vea consistente con el resto de la estética de la app.
+function CheckboxCISD({ checked }) {
+  return (
+    <span style={{
+      width: 19, height: 19, borderRadius: 5, flexShrink: 0,
+      display: "flex", alignItems: "center", justifyContent: "center",
+      background: checked ? COLORS.pine : COLORS.white,
+      border: checked ? "none" : `1.5px solid ${COLORS.line}`,
+    }}>
+      {checked && <span style={{ color: COLORS.white, fontSize: 11, fontWeight: 700, lineHeight: 1 }}>✓</span>}
+    </span>
+  );
+}
+
 function CeldaResultadoOficial({ resultado, notaAprobacion }) {
   const { tipo, valor } = resultado;
   let color = "#bbb";
@@ -4997,6 +5012,9 @@ function ModalInformesTutores({ colegio, curso, alumnos, criteriosActivos, notaA
     else generarWordInformes(html, nombreArchivoCorto("Informe", curso.nombre));
   }
 
+  const tarjetaStyle = { background: COLORS.paper, border: `1px solid ${COLORS.line}`, borderRadius: 14, padding: 14, marginBottom: 14 };
+  const tarjetaTituloStyle = { fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, fontWeight: 700, color: COLORS.pine, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 10, display: "flex", alignItems: "center", justifyContent: "space-between" };
+
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(34,32,27,0.55)", display: "flex", alignItems: "flex-end", justifyContent: "center", zIndex: 96 }}>
       <div style={{ background: COLORS.white, borderRadius: "18px 18px 0 0", padding: 18, width: "100%", maxWidth: 480, maxHeight: "88vh", overflowY: "auto", boxShadow: "0 -8px 30px rgba(0,0,0,0.25)" }}>
@@ -5007,43 +5025,65 @@ function ModalInformesTutores({ colegio, curso, alumnos, criteriosActivos, notaA
           Tildá los alumnos, elegí qué incluir y generá el documento.
         </div>
 
-        <div style={etiquetaCampoStyle}>Alumnos</div>
-        <div
-          onClick={alternarTodos}
-          style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 4px", cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 600, color: COLORS.pine }}
-        >
-          <input type="checkbox" readOnly checked={seleccion.size === alumnos.length && alumnos.length > 0} />
-          {seleccion.size === alumnos.length ? "Destildar todos" : "Tildar todos"}
+        <div style={tarjetaStyle}>
+          <div style={tarjetaTituloStyle}>
+            Alumnos
+            <span onClick={alternarTodos} style={{ color: COLORS.ochre, textTransform: "none", letterSpacing: 0, fontSize: 12.5, cursor: "pointer" }}>
+              {seleccion.size === alumnos.length && alumnos.length > 0 ? "Destildar todos" : "Tildar todos"}
+            </span>
+          </div>
+          <div style={{ maxHeight: 160, overflowY: "auto" }}>
+            {alumnos.map((a) => (
+              <div key={a.id} onClick={() => alternarAlumno(a.id)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 2px", cursor: "pointer" }}>
+                <CheckboxCISD checked={seleccion.has(a.id)} />
+                <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, fontWeight: 600, color: a.genero === "M" ? COLORS.nombreM : COLORS.nombreF }}>{a.nombre}</span>
+              </div>
+            ))}
+            {alumnos.length === 0 && <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, color: COLORS.inkSoft, padding: "4px 2px" }}>Este curso todavía no tiene alumnos.</div>}
+          </div>
         </div>
-        <div style={{ maxHeight: 160, overflowY: "auto", border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: "4px 8px", marginBottom: 14 }}>
-          {alumnos.map((a) => (
-            <div key={a.id} onClick={() => alternarAlumno(a.id)} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 2px", cursor: "pointer", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, color: COLORS.ink }}>
-              <input type="checkbox" readOnly checked={seleccion.has(a.id)} />
-              {a.nombre}
+
+        <div style={tarjetaStyle}>
+          <div style={tarjetaTituloStyle}>Cuatrimestre</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <div
+              onClick={() => setCuat1((v) => !v)}
+              style={{
+                flex: 1, textAlign: "center", padding: "9px 0", borderRadius: 999, cursor: "pointer",
+                fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 700,
+                background: cuat1 ? COLORS.pine : COLORS.white, color: cuat1 ? COLORS.white : COLORS.inkSoft,
+                border: cuat1 ? "none" : `1.5px solid ${COLORS.line}`,
+                boxShadow: cuat1 ? "0 3px 8px rgba(18,41,31,0.2)" : "0 2px 5px rgba(18,41,31,0.08)",
+              }}
+            >
+              1° cuatrimestre
             </div>
-          ))}
-          {alumnos.length === 0 && <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, color: COLORS.inkSoft, padding: "4px 2px" }}>Este curso todavía no tiene alumnos.</div>}
+            <div
+              onClick={() => setCuat2((v) => !v)}
+              style={{
+                flex: 1, textAlign: "center", padding: "9px 0", borderRadius: 999, cursor: "pointer",
+                fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 700,
+                background: cuat2 ? COLORS.pine : COLORS.white, color: cuat2 ? COLORS.white : COLORS.inkSoft,
+                border: cuat2 ? "none" : `1.5px solid ${COLORS.line}`,
+                boxShadow: cuat2 ? "0 3px 8px rgba(18,41,31,0.2)" : "0 2px 5px rgba(18,41,31,0.08)",
+              }}
+            >
+              2° cuatrimestre
+            </div>
+          </div>
         </div>
 
-        <div style={etiquetaCampoStyle}>Cuatrimestre</div>
-        <div style={{ display: "flex", gap: 14, marginBottom: 14 }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, color: COLORS.ink, cursor: "pointer" }}>
-            <input type="checkbox" checked={cuat1} onChange={() => setCuat1((v) => !v)} /> 1° cuatrimestre
-          </label>
-          <label style={{ display: "flex", alignItems: "center", gap: 6, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, color: COLORS.ink, cursor: "pointer" }}>
-            <input type="checkbox" checked={cuat2} onChange={() => setCuat2((v) => !v)} /> 2° cuatrimestre
-          </label>
-        </div>
-
-        <div style={etiquetaCampoStyle}>Qué incluir</div>
-        <div style={{ marginBottom: 14 }}>
-          <label style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 2px", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, color: COLORS.ink, cursor: "pointer" }}>
-            <input type="checkbox" checked={incluirNotas} onChange={() => setIncluirNotas((v) => !v)} /> Planilla de Calificaciones
-          </label>
+        <div style={tarjetaStyle}>
+          <div style={tarjetaTituloStyle}>Qué incluir</div>
+          <div onClick={() => setIncluirNotas((v) => !v)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 2px", cursor: "pointer" }}>
+            <CheckboxCISD checked={incluirNotas} />
+            <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, fontWeight: 700, color: COLORS.ink }}>Planilla de Calificaciones</span>
+          </div>
           {criteriosActivos.map((c) => (
-            <label key={c.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 2px", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, color: COLORS.ink, cursor: "pointer" }}>
-              <input type="checkbox" checked={criteriosSel.has(c.id)} onChange={() => alternarCriterio(c.id)} /> {c.nombre}
-            </label>
+            <div key={c.id} onClick={() => alternarCriterio(c.id)} style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 2px", cursor: "pointer" }}>
+              <CheckboxCISD checked={criteriosSel.has(c.id)} />
+              <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, color: COLORS.ink }}>{c.nombre}</span>
+            </div>
           ))}
           {criteriosActivos.length === 0 && <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, color: COLORS.inkSoft, padding: "4px 2px" }}>Este curso todavía no tiene criterios activos.</div>}
         </div>
@@ -5052,14 +5092,22 @@ function ModalInformesTutores({ colegio, curso, alumnos, criteriosActivos, notaA
           <button
             onClick={() => generar("pdf")}
             disabled={!puedeGenerar}
-            style={{ flex: 1, padding: "11px 8px", borderRadius: 10, border: "none", background: puedeGenerar ? COLORS.pine : COLORS.paperDim, color: puedeGenerar ? COLORS.white : COLORS.inkSoft, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, fontWeight: 700, cursor: puedeGenerar ? "pointer" : "default" }}
+            style={{
+              flex: 1, padding: "11px 8px", borderRadius: 10, border: "none", background: puedeGenerar ? COLORS.pine : COLORS.paperDim,
+              color: puedeGenerar ? COLORS.white : COLORS.inkSoft, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, fontWeight: 700,
+              cursor: puedeGenerar ? "pointer" : "default", boxShadow: puedeGenerar ? "0 4px 10px rgba(18,41,31,0.25)" : "none",
+            }}
           >
             Generar PDF
           </button>
           <button
             onClick={() => generar("word")}
             disabled={!puedeGenerar}
-            style={{ flex: 1, padding: "11px 8px", borderRadius: 10, border: `1.5px solid ${puedeGenerar ? COLORS.pine : COLORS.line}`, background: COLORS.white, color: puedeGenerar ? COLORS.pine : COLORS.inkSoft, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, fontWeight: 700, cursor: puedeGenerar ? "pointer" : "default" }}
+            style={{
+              flex: 1, padding: "11px 8px", borderRadius: 10, border: `1.5px solid ${puedeGenerar ? COLORS.pine : COLORS.line}`, background: COLORS.white,
+              color: puedeGenerar ? COLORS.pine : COLORS.inkSoft, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, fontWeight: 700,
+              cursor: puedeGenerar ? "pointer" : "default", boxShadow: puedeGenerar ? "0 3px 8px rgba(18,41,31,0.10)" : "none",
+            }}
           >
             Generar Word
           </button>
@@ -5069,7 +5117,11 @@ function ModalInformesTutores({ colegio, curso, alumnos, criteriosActivos, notaA
         </div>
         <button
           onClick={onCerrar}
-          style={{ width: "100%", marginTop: 8, padding: "9px 8px", borderRadius: 10, border: "none", background: "transparent", color: COLORS.inkSoft, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+          style={{
+            width: "100%", marginTop: 10, padding: "10px 8px", borderRadius: 10, border: `1.5px solid ${COLORS.line}`, background: COLORS.white,
+            color: COLORS.inkSoft, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 700, cursor: "pointer",
+            boxShadow: "0 3px 8px rgba(18,41,31,0.08)",
+          }}
         >
           Cancelar
         </button>
