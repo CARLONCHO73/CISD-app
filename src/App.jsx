@@ -3528,6 +3528,54 @@ function CorreccionMasiva({ alumnos, criteriosInstancias, periodo, instanciasPor
 // en ese caso se confirma antes de guardar, y el cambio impacta la
 // misma ficha individual del alumno (es el mismo dato).
 // ================================================================
+// Calcula qué mostrar en Diciembre / Febrero / Nota Final para un alumno,
+// a partir de su nota regular (la de los dos cuatrimestres) y de lo ya
+// cargado en las pantallas de Recuperatorio. Se usa tanto en la Planilla
+// interactiva como en el documento que se descarga, para que las dos
+// vistas muestren siempre exactamente lo mismo.
+function resultadoRecuperatorios(al, notaAprobacion, notaRegular) {
+  function celda(valor) {
+    if (!valor) return { tipo: "vacio", valor: "" };
+    if (esMarcaAusente(valor)) return { tipo: "valor", valor: "Aus" };
+    return { tipo: "valor", valor };
+  }
+  const numNotaRegular = Number(String(notaRegular).replace(",", "."));
+  const aprobadoRegular = notaRegular && !esMarcaAusente(notaRegular) && !Number.isNaN(numNotaRegular) && numNotaRegular >= (notaAprobacion || 6);
+
+  if (aprobadoRegular) {
+    return { dic: { tipo: "raya", valor: "—" }, feb: { tipo: "raya", valor: "—" }, final: celda(notaRegular) };
+  }
+  const dic = al.notaDiciembre || "";
+  const feb = al.notaFebrero || "";
+  const dicAusente = esMarcaAusente(dic);
+  const numDic = Number(String(dic).replace(",", "."));
+  const dicAprobado = dic && !dicAusente && !Number.isNaN(numDic) && numDic >= (notaAprobacion || 6);
+
+  const celdaDic = celda(dic);
+  const celdaFeb = dicAprobado ? { tipo: "raya", valor: "—" } : celda(feb);
+  const notaFinalValor = dicAprobado ? dic : (feb || "");
+  return { dic: celdaDic, feb: celdaFeb, final: celda(notaFinalValor) };
+}
+
+function CeldaResultadoOficial({ resultado, notaAprobacion }) {
+  const { tipo, valor } = resultado;
+  let color = "#bbb";
+  let bg = COLORS.white;
+  if (tipo === "valor") {
+    if (valor === "Aus") { color = COLORS.notaRoja; bg = "#F9E1DE"; }
+    else { color = colorNota(valor, notaAprobacion); bg = "#FBF8F0"; }
+  }
+  return (
+    <div style={{
+      width: "100%", boxSizing: "border-box", textAlign: "center", borderTop: `1px solid ${COLORS.line}`, background: bg,
+      fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, fontWeight: 700, color,
+      padding: "7px 2px", minWidth: 0, contentVisibility: "auto", containIntrinsicSize: "auto 31px",
+    }}>
+      {tipo === "vacio" ? "" : valor}
+    </div>
+  );
+}
+
 function CeldaNotaOficial({ valor, tipo, notaAprobacion, onIntentarCambiar, calculado = false, soloLectura = false }) {
   const [editando, setEditando] = useState(false);
   const [borrador, setBorrador] = useState(valor || "");
@@ -4522,7 +4570,7 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
           {/* Panel de notas: acá sí hay scroll horizontal, para deslizar
               entre las 7 columnas sin mover la columna de nombres. */}
           <div style={{ overflowX: "auto", flex: 1 }}>
-            <div style={{ display: "grid", gridTemplateColumns: `repeat(7, ${anchoColumna}px)`, width: "fit-content" }}>
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(10, ${anchoColumna}px)`, width: "fit-content" }}>
               {columnas.map((c, idx) => (
                 <EncabezadoColumnaEditable
                   key={c.key + "-h"}
@@ -4531,24 +4579,41 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
                   onAbrirRenombrar={(col) => setRenombrando({ key: col.key, label: col.label })}
                 />
               ))}
+              {["Dic", "Feb", "Final"].map((etiqueta) => (
+                <div key={"h-" + etiqueta} style={{
+                  background: COLORS.ochre, color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif",
+                  fontSize: 9.5, fontWeight: 600, textAlign: "center", padding: "6px 1px", lineHeight: 1.15, height: 29, boxSizing: "border-box",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  {etiqueta}
+                </div>
+              ))}
 
               {alumnos.map((al) => {
                 const { valores, calculadas } = notasConPromedios(al.notasOficiales, promedioAuto);
-                return columnas.map((c) => (
-                  <CeldaNotaOficial
-                    key={al.id + "-" + c.key}
-                    valor={valores[c.key] || ""}
-                    calculado={calculadas.has(c.key)}
-                    tipo={c.tipo}
-                    notaAprobacion={notaAprobacion}
-                    soloLectura={!modoEdicion}
-                    onIntentarCambiar={(valorNuevo) => setPendiente({
-                      alumnoId: al.id, alumnoNombre: al.nombre, campo: c.key, columnaLabel: c.label,
-                      valorAnterior: (al.notasOficiales && al.notasOficiales[c.key]) || "(vacío)",
-                      valorNuevo: valorNuevo || "(vacío)",
-                    })}
-                  />
-                ));
+                const resultado = resultadoRecuperatorios(al, notaAprobacion, valores["nota"] || "");
+                return (
+                  <React.Fragment key={al.id}>
+                    {columnas.map((c) => (
+                      <CeldaNotaOficial
+                        key={al.id + "-" + c.key}
+                        valor={valores[c.key] || ""}
+                        calculado={calculadas.has(c.key)}
+                        tipo={c.tipo}
+                        notaAprobacion={notaAprobacion}
+                        soloLectura={!modoEdicion}
+                        onIntentarCambiar={(valorNuevo) => setPendiente({
+                          alumnoId: al.id, alumnoNombre: al.nombre, campo: c.key, columnaLabel: c.label,
+                          valorAnterior: (al.notasOficiales && al.notasOficiales[c.key]) || "(vacío)",
+                          valorNuevo: valorNuevo || "(vacío)",
+                        })}
+                      />
+                    ))}
+                    <CeldaResultadoOficial resultado={resultado.dic} notaAprobacion={notaAprobacion} />
+                    <CeldaResultadoOficial resultado={resultado.feb} notaAprobacion={notaAprobacion} />
+                    <CeldaResultadoOficial resultado={resultado.final} notaAprobacion={notaAprobacion} />
+                  </React.Fragment>
+                );
               })}
             </div>
           </div>
@@ -4764,38 +4829,19 @@ function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, nota
     }).join("");
 
     // Diciembre / Febrero / Nota Final: transcripción de lo ya cargado en
-    // las pantallas de Recuperatorio, con esta lógica — si el alumno ya
-    // aprobó con la nota regular (≥ nota mínima), Dic y Feb se marcan con
-    // una raya (no corresponde) y la Nota Final repite la nota regular.
-    // Si no aprobó, se van completando con lo que haya en cada instancia;
-    // las celdas sin cargar todavía quedan en blanco (no "pendiente").
+    // las pantallas de Recuperatorio (misma regla que en la Planilla
+    // interactiva, calculada con la función compartida resultadoRecuperatorios).
     const notaRegular = valores["nota"] || "";
-    const numNotaRegular = Number(String(notaRegular).replace(",", "."));
-    const aprobadoRegular = notaRegular && !esMarcaAusente(notaRegular) && !Number.isNaN(numNotaRegular) && numNotaRegular >= (notaAprobacion || 6);
-
-    function celdaResultado(valor) {
-      if (!valor) return `<td class="celda-pendiente"></td>`;
-      if (esMarcaAusente(valor)) return `<td style="color:${COLORS.notaRoja};font-weight:700;">Aus</td>`;
-      return `<td style="color:${colorNota(valor, notaAprobacion)};font-weight:700;">${escapeHtml(valor)}</td>`;
+    const resultado = resultadoRecuperatorios(al, notaAprobacion, notaRegular);
+    function celdaHTML(r) {
+      if (r.tipo === "vacio") return `<td class="celda-pendiente"></td>`;
+      if (r.tipo === "raya") return `<td class="celda-raya">—</td>`;
+      if (r.valor === "Aus") return `<td style="color:${COLORS.notaRoja};font-weight:700;">Aus</td>`;
+      return `<td style="color:${colorNota(r.valor, notaAprobacion)};font-weight:700;">${escapeHtml(r.valor)}</td>`;
     }
-
-    let celdaDic, celdaFeb, celdaFinal;
-    if (aprobadoRegular) {
-      celdaDic = `<td class="celda-raya">—</td>`;
-      celdaFeb = `<td class="celda-raya">—</td>`;
-      celdaFinal = celdaResultado(notaRegular);
-    } else {
-      const dic = al.notaDiciembre || "";
-      const feb = al.notaFebrero || "";
-      const dicAusente = esMarcaAusente(dic);
-      const numDic = Number(String(dic).replace(",", "."));
-      const dicAprobado = dic && !dicAusente && !Number.isNaN(numDic) && numDic >= (notaAprobacion || 6);
-
-      celdaDic = celdaResultado(dic);
-      celdaFeb = dicAprobado ? `<td class="celda-raya">—</td>` : celdaResultado(feb);
-      const notaFinalValor = dicAprobado ? dic : (feb || "");
-      celdaFinal = celdaResultado(notaFinalValor);
-    }
+    const celdaDic = celdaHTML(resultado.dic);
+    const celdaFeb = celdaHTML(resultado.feb);
+    const celdaFinal = celdaHTML(resultado.final);
 
     return `<tr><td class="col-num">${i + 1}</td><td class="col-nombre">${escapeHtml(al.nombre)}</td>${celdas}${celdaDic}${celdaFeb}${celdaFinal}</tr>`;
   }).join("\n");
