@@ -1229,15 +1229,15 @@ function PantallaColegios({ colegios, cursosPorColegio, onAbrir, onAgregar, onRe
           onClick={onAbrirSugerencia}
           style={{
             position: "fixed", left: "50%", transform: "translateX(-50%)", bottom: 20, zIndex: 40,
-            display: "flex", alignItems: "center", gap: 7, whiteSpace: "nowrap",
-            padding: "11px 18px", borderRadius: 999, border: "none", cursor: "pointer",
-            background: COLORS.white, color: COLORS.pineDark,
-            fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 600,
-            boxShadow: "0 6px 18px rgba(21,53,49,0.22)",
+            display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap",
+            padding: "13px 22px", borderRadius: 999, border: "none", cursor: "pointer",
+            background: COLORS.ochre, color: COLORS.white,
+            fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, fontWeight: 700,
+            boxShadow: "0 8px 22px rgba(201,123,59,0.45)",
           }}
         >
-          <StickyNote size={14} strokeWidth={2.3} color={COLORS.ochre} />
-          La app está a prueba — dejá tu sugerencia
+          <StickyNote size={16} strokeWidth={2.4} color={COLORS.white} />
+          Tu opinión nos ayuda — contanos algo
         </button>
       )}
 
@@ -6257,29 +6257,42 @@ function PopupElegirNombre({ valorInicial = "", titulo, subtitulo, textoBoton, o
 // cualquier docente le mande a Carloncho una sugerencia o comentario
 // sobre la app, sin salir de donde está.
 function PopupSugerencia({ onEnviar, onCerrar }) {
-  const [texto, setTexto] = useState("");
+  const [r1, setR1] = useState("");
+  const [r2, setR2] = useState("");
+  const [r3, setR3] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
 
+  const hayAlgo = r1.trim() || r2.trim() || r3.trim();
+
   async function confirmar() {
-    const limpio = texto.trim();
-    if (!limpio) return;
+    if (!hayAlgo) return;
     setEnviando(true);
-    const ok = await onEnviar(limpio);
+    const partes = [];
+    if (r1.trim()) partes.push(`¿Qué se te hace más difícil o pesado al usar CISD?\n${r1.trim()}`);
+    if (r2.trim()) partes.push(`¿Hay algo que te gustaría que CISD haga y todavía no hace?\n${r2.trim()}`);
+    if (r3.trim()) partes.push(`Si pudieras pedir una sola mejora primero, ¿cuál sería?\n${r3.trim()}`);
+    const ok = await onEnviar(partes.join("\n\n"));
     setEnviando(false);
     if (ok) setEnviado(true);
   }
 
+  const campoStyle = {
+    width: "100%", boxSizing: "border-box", border: `1px solid ${COLORS.line}`, borderRadius: 10,
+    padding: "9px 11px", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, resize: "vertical",
+  };
+  const preguntaStyle = { fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 700, color: COLORS.pineDark, marginBottom: 6 };
+
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(21,53,49,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 210, padding: 20 }}>
-      <div style={{ background: COLORS.white, borderRadius: 16, padding: 22, width: "100%", maxWidth: 360, boxShadow: "0 16px 40px rgba(0,0,0,0.35)" }}>
+      <div style={{ background: COLORS.white, borderRadius: 16, padding: 22, width: "100%", maxWidth: 400, maxHeight: "88vh", overflowY: "auto", boxShadow: "0 16px 40px rgba(0,0,0,0.35)" }}>
         {enviado ? (
           <>
             <div style={{ fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 600, color: COLORS.pineDark, marginBottom: 6 }}>
-              ¡Gracias!
+              ¡Gracias! 🙌
             </div>
             <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, color: COLORS.inkSoft, marginBottom: 16, lineHeight: 1.45 }}>
-              Tu sugerencia ya está en camino.
+              Tu opinión ya está en camino. Nos ayuda un montón a mejorar CISD.
             </div>
             <button
               onClick={onCerrar}
@@ -6290,17 +6303,26 @@ function PopupSugerencia({ onEnviar, onCerrar }) {
           </>
         ) : (
           <>
-            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 600, color: COLORS.pineDark, marginBottom: 6 }}>
-              Enviar sugerencia
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: 19, fontWeight: 600, color: COLORS.pineDark, marginBottom: 4 }}>
+              Tu opinión vale mucho 🙌
             </div>
-            <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: COLORS.inkSoft, marginBottom: 14, lineHeight: 1.45 }}>
-              La app está a prueba: contame lo que se te ocurra, un error que veas, o una idea para mejorarla.
+            <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: COLORS.inkSoft, marginBottom: 16, lineHeight: 1.45 }}>
+              Ayudanos a mejorar CISD. Respondé la que quieras, no hace falta contestar las tres.
             </div>
-            <textarea
-              value={texto} onChange={(e) => setTexto(e.target.value)} autoFocus rows={4}
-              placeholder="Escribí acá tu sugerencia…"
-              style={{ width: "100%", boxSizing: "border-box", border: `1px solid ${COLORS.line}`, borderRadius: 10, padding: "10px 12px", fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, marginBottom: 14, resize: "vertical" }}
-            />
+
+            <div style={{ marginBottom: 14 }}>
+              <div style={preguntaStyle}>¿Qué se te hace más difícil o pesado al usar CISD?</div>
+              <textarea value={r1} onChange={(e) => setR1(e.target.value)} rows={2} placeholder="Contanos…" style={campoStyle} />
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <div style={preguntaStyle}>¿Hay algo que te gustaría que CISD haga y todavía no hace?</div>
+              <textarea value={r2} onChange={(e) => setR2(e.target.value)} rows={2} placeholder="Contanos, aunque sea una idea suelta…" style={campoStyle} />
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <div style={preguntaStyle}>Si pudieras pedir una sola mejora primero, ¿cuál sería?</div>
+              <textarea value={r3} onChange={(e) => setR3(e.target.value)} rows={2} placeholder="Contanos…" style={campoStyle} />
+            </div>
+
             <div style={{ display: "flex", gap: 8 }}>
               <button
                 onClick={onCerrar}
@@ -6310,8 +6332,8 @@ function PopupSugerencia({ onEnviar, onCerrar }) {
               </button>
               <button
                 onClick={confirmar}
-                disabled={!texto.trim() || enviando}
-                style={{ flex: 1, padding: "10px", borderRadius: 10, border: "none", background: texto.trim() ? COLORS.pine : COLORS.line, color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, fontWeight: 600, cursor: texto.trim() ? "pointer" : "default" }}
+                disabled={!hayAlgo || enviando}
+                style={{ flex: 1, padding: "10px", borderRadius: 10, border: "none", background: hayAlgo ? COLORS.pine : COLORS.line, color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, fontWeight: 600, cursor: hayAlgo ? "pointer" : "default" }}
               >
                 {enviando ? "Enviando…" : "Enviar"}
               </button>
