@@ -1929,11 +1929,62 @@ function SeccionCriterios({ curso, criterios, ordenPorCurso, onReordenar, onAgre
 // usa Enter, el botón "Agregar" clásico hace lo mismo. El botón
 // flotante sirve para incorporaciones tardías, en cualquier momento.
 // ================================================================
-function ListaAlumnosRapida({ alumnos, onAgregar, onBorrar, onEditar, onAbrirFicha }) {
+// Alerta temprana: detecta cuándo un alumno viene acumulando señales
+// negativas recientes (notas bajas o valoraciones cualitativas negativas),
+// para que el docente lo note antes de que sea un problema grande.
+const PALABRAS_NEGATIVAS = [
+  "mala", "malo", "poca", "poco", "regular", "bajo", "baja", "nula", "nulo",
+  "incompleta", "incompleto", "no realiza", "desaprobad", "insuficiente",
+  "deficiente", "escaso", "escasa", "pobre", "no cumple", "no cumplió",
+  "no logra", "no logró", "no alcanza", "no alcanzó", "limitado", "limitada",
+  "inadecuado", "inadecuada", "negativo", "negativa", "irregular", "flojo",
+  "floja", "débil", "debil", "carente", "carece", "no presenta", "no entrega",
+  "no trabaja", "desatento", "desatenta", "inconsistente", "insatisfactorio",
+  "desfavorable", "con dificultad",
+];
+
+function esSenalNegativa(criterio, evento, notaAprobacion) {
+  if (!criterio || !evento) return false;
+  if (criterio.tipo === "numerico" || criterio.tipo === "numerico_instancias") {
+    if (esMarcaAusente(evento.valor)) return false;
+    const num = Number(String(evento.valor).replace(",", "."));
+    return !Number.isNaN(num) && num < (notaAprobacion || 6);
+  }
+  if (criterio.tipo === "opcion") {
+    const texto = String(evento.valor || "").toLowerCase();
+    return PALABRAS_NEGATIVAS.some((p) => texto.includes(p));
+  }
+  return false;
+}
+
+// Devuelve null si no corresponde alerta, o { cantidad, criterios } si el
+// alumno acumuló 2 o más señales negativas en los últimos 21 días. Si el
+// docente ya tocó "Ya lo estoy siguiendo", solo cuentan señales nuevas,
+// posteriores a ese momento (nunca se apaga sola por el paso del tiempo).
+function calcularAlerta(alumno, criterios, notaAprobacion) {
+  const mapaCriterios = new Map((criterios || []).map((c) => [c.id, c]));
+  const descartadaDesde = alumno.alertaDescartadaDesde ? new Date(alumno.alertaDescartadaDesde) : null;
+  const limite = new Date();
+  limite.setDate(limite.getDate() - 21);
+
+  const senales = (alumno.eventos || []).filter((ev) => {
+    const fechaEv = new Date(ev.fecha);
+    if (Number.isNaN(fechaEv.getTime()) || fechaEv < limite) return false;
+    if (descartadaDesde && fechaEv <= descartadaDesde) return false;
+    return esSenalNegativa(mapaCriterios.get(ev.criterioId), ev, notaAprobacion);
+  });
+
+  if (senales.length < 2) return null;
+  const nombresCriterios = [...new Set(senales.map((ev) => (mapaCriterios.get(ev.criterioId) || {}).nombre).filter(Boolean))];
+  return { cantidad: senales.length, criterios: nombresCriterios };
+}
+
+function ListaAlumnosRapida({ alumnos, onAgregar, onBorrar, onEditar, onAbrirFicha, criterios, notaAprobacion, onMarcarAlertaDescartada }) {
   const [draft, setDraft] = useState("");
   const [generoDraft, setGeneroDraft] = useState("F");
   const [popupGeneroAbierto, setPopupGeneroAbierto] = useState(false);
   const [menuAbierto, setMenuAbierto] = useState(null);
+  const [alertaAbierta, setAlertaAbierta] = useState(null);
   // Edición del nombre de un alumno ya cargado, por si se tipeó mal.
   const [editandoId, setEditandoId] = useState(null);
   const [editDraft, setEditDraft] = useState("");
@@ -2047,6 +2098,42 @@ function ListaAlumnosRapida({ alumnos, onAgregar, onBorrar, onEditar, onAbrirFic
                 </div>
               </div>
             )}
+
+            {editandoId !== al.id && (() => {
+              const alerta = calcularAlerta(al, criterios, notaAprobacion);
+              if (!alerta) return <span style={{ width: 21, flexShrink: 0 }} />;
+              return (
+                <div style={{ position: "relative", flexShrink: 0 }}>
+                  <span
+                    onClick={(e) => { e.stopPropagation(); setAlertaAbierta(alertaAbierta === al.id ? null : al.id); }}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 8, margin: -8, cursor: "pointer" }}
+                    aria-label="Para seguir de cerca"
+                  >
+                    <span style={{ width: 9, height: 9, borderRadius: "50%", background: COLORS.ochre, boxShadow: `0 0 0 3px rgba(201,123,59,0.22)`, display: "inline-block" }} />
+                  </span>
+                  {alertaAbierta === al.id && (
+                    <>
+                      <div onClick={(e) => { e.stopPropagation(); setAlertaAbierta(null); }} style={{ position: "fixed", inset: 0, zIndex: 130 }} />
+                      <div style={{ position: "absolute", top: "calc(100% + 8px)", right: -6, zIndex: 131, background: COLORS.pineDark, color: COLORS.paper, borderRadius: 14, padding: "14px 16px", width: 232, boxShadow: "0 16px 34px rgba(18,41,31,0.4)" }}>
+                        <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 15, marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: "50%", background: COLORS.ochre, display: "inline-block", flexShrink: 0 }} />
+                          Para seguir de cerca
+                        </div>
+                        <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, color: "#cfd6c9", lineHeight: 1.4, marginBottom: 12 }}>
+                          {alerta.cantidad} notas bajas en las últimas 3 semanas{alerta.criterios.length ? ` (${alerta.criterios.join(", ")})` : ""}.
+                        </div>
+                        <div
+                          onClick={(e) => { e.stopPropagation(); onMarcarAlertaDescartada(al.id); setAlertaAbierta(null); }}
+                          style={{ background: COLORS.ochre, color: "#fff", textAlign: "center", padding: "9px 0", borderRadius: 999, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 700, cursor: "pointer" }}
+                        >
+                          ✓ Ya lo estoy siguiendo
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
 
             {editandoId === al.id ? (
               <>
@@ -5895,7 +5982,7 @@ function PantallaHorarioDocente({ colegios, cursosPorColegio, diasClasePorCurso,
   );
 }
 
-function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno, onEditarAlumno, onAbrirFicha, onVolver, criterios, ordenPorCurso, onReordenarCriterios, onAgregarCriterio, onUsarCriterio, onUsarCriterioEnTodos, onQuitarCriterio, onEditarCriterio, onEliminarCriterioDefinitivo, periodo, onCambiarPeriodo, instanciasPorCriterio, onGuardarMasivo, onGuardarComentarioMasivo, onAgregarInstancia, onEditarInstancia, onBorrarInstancia, notaAprobacion, onCambiarNotaAprobacion, onCambiarNotaOficial, onCambiarNotaRecuperatorio, nombresColumnasPorColegio, onRenombrarColumnaNota, diasCurso, diasClaseConfig, onAlternarCeldaAsistencia, onAlternarTodosPresentes, onSetMotivoNoTrabajado, onSetDiasClase, tourVisto, onMarcarTourVisto, tourVistoPorPantalla, onMarcarTourVistoPantalla, promedioAuto, onTogglePromedioAuto }) {
+function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno, onEditarAlumno, onAbrirFicha, onVolver, criterios, ordenPorCurso, onReordenarCriterios, onAgregarCriterio, onUsarCriterio, onUsarCriterioEnTodos, onQuitarCriterio, onEditarCriterio, onEliminarCriterioDefinitivo, periodo, onCambiarPeriodo, instanciasPorCriterio, onGuardarMasivo, onGuardarComentarioMasivo, onMarcarAlertaDescartada, onAgregarInstancia, onEditarInstancia, onBorrarInstancia, notaAprobacion, onCambiarNotaAprobacion, onCambiarNotaOficial, onCambiarNotaRecuperatorio, nombresColumnasPorColegio, onRenombrarColumnaNota, diasCurso, diasClaseConfig, onAlternarCeldaAsistencia, onAlternarTodosPresentes, onSetMotivoNoTrabajado, onSetDiasClase, tourVisto, onMarcarTourVisto, tourVistoPorPantalla, onMarcarTourVistoPantalla, promedioAuto, onTogglePromedioAuto }) {
   const [busqueda, setBusqueda] = useState("");
   const [masivaAbierta, setMasivaAbierta] = useState(false);
   const [planillaAbierta, setPlanillaAbierta] = useState(false);
@@ -5967,7 +6054,7 @@ function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno
         )}
 
         <div ref={refAlumnos} style={{ marginTop: 10 }}>
-          <ListaAlumnosRapida alumnos={alumnosFiltrados} onAgregar={onAgregarAlumno} onBorrar={onBorrarAlumno} onEditar={onEditarAlumno} onAbrirFicha={onAbrirFicha} />
+          <ListaAlumnosRapida alumnos={alumnosFiltrados} onAgregar={onAgregarAlumno} onBorrar={onBorrarAlumno} onEditar={onEditarAlumno} onAbrirFicha={onAbrirFicha} criterios={criterios} notaAprobacion={notaAprobacion} onMarcarAlertaDescartada={onMarcarAlertaDescartada} />
         </div>
       </div>
 
@@ -6986,6 +7073,17 @@ function CISDNavegacion() {
     }));
   }
 
+  // Guarda el momento en que el docente tocó "Ya lo estoy siguiendo" para
+  // un alumno. A partir de ahí, el punto de alerta temprana solo vuelve a
+  // aparecer si surge una señal negativa NUEVA (posterior a esta fecha) —
+  // nunca se apaga solo con el paso del tiempo.
+  function marcarAlertaDescartada(curId, alumnoId) {
+    setAlumnosPorCurso((prev) => ({
+      ...prev,
+      [curId]: (prev[curId] || []).map((a) => (a.id === alumnoId ? { ...a, alertaDescartadaDesde: new Date().toISOString() } : a)),
+    }));
+  }
+
   // Adjunta (o edita) el recuperatorio de una nota ya registrada. Comparte
   // la misma fecha del registro original, porque no se toca `.fecha`.
   function setRecuperatorio(curId, alumnoId, eventoId, valor) {
@@ -7384,6 +7482,7 @@ function CISDNavegacion() {
             instanciasPorCriterio={instanciasPorCurso[cursoActual.id] || {}}
             onGuardarMasivo={(alumnoId, criterioId, valor, instanciaId) => guardarNotaInstancia(cursoActual.id, alumnoId, criterioId, instanciaId, valor)}
             onGuardarComentarioMasivo={(alumnoId, criterioId, instanciaId, comentario) => guardarComentarioInstancia(cursoActual.id, alumnoId, criterioId, instanciaId, comentario)}
+            onMarcarAlertaDescartada={(alumnoId) => marcarAlertaDescartada(cursoActual.id, alumnoId)}
             onAgregarInstancia={(criterioId, nombre) => agregarInstanciaEvaluacion(cursoActual.id, criterioId, nombre)}
             onEditarInstancia={(criterioId, instanciaId, nombre) => editarInstanciaEvaluacion(cursoActual.id, criterioId, instanciaId, nombre)}
             onBorrarInstancia={(criterioId, instanciaId) => borrarInstanciaEvaluacion(cursoActual.id, criterioId, instanciaId)}
