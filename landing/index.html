@@ -4,7 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CISD — Cuaderno Integral de Seguimiento Docente</title>
-<meta name="description" content="CISD es la plataforma integral que simplifica el registro de asistencias, notas e informes pedagógicos en una sola pantalla. Tu cuaderno docente, ahora digital.">
+<meta name="description" content="CISD arma solo, con lo que ya cargás día a día, un informe individual profesional de cada alumno y te avisa a tiempo quién necesita un seguimiento más cercano. Tu cuaderno docente, ahora digital.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
@@ -13,18 +16,14 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="CISD">
 <meta property="og:title" content="CISD — Cuaderno Integral de Seguimiento Docente">
-<meta property="og:description" content="Asistencia, notas, criterios e informes de tus cursos, en una sola pantalla. Sin instalar nada, gratis por este ciclo lectivo.">
+<meta property="og:description" content="Informes individuales profesionales de cada alumno, armados solos con lo que ya cargás. Y una alerta temprana para saber a tiempo quién necesita una mano.">
 <meta property="og:image" content="https://www.cisd.com.ar/og-image.png">
 <meta property="og:url" content="https://www.cisd.com.ar">
 <meta property="og:locale" content="es_AR">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="CISD — Cuaderno Integral de Seguimiento Docente">
-<meta name="twitter:description" content="Asistencia, notas, criterios e informes de tus cursos, en una sola pantalla.">
+<meta name="twitter:description" content="Informes individuales profesionales de cada alumno, armados solos. Y una alerta temprana para saber a tiempo quién necesita una mano.">
 <meta name="twitter:image" content="https://www.cisd.com.ar/og-image.png">
-
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --cream: #F4EFE3;
@@ -36,602 +35,205 @@
     --pine-600: #2F5E4A;
     --amber: #C97B3B;
     --amber-deep: #B3672C;
+    --green-ok: #2E7D46;
+    --red-warn: #C0392B;
     --ink: #1B241F;
     --muted: #5C685F;
     --line: #DBD2BC;
-    --ring: rgba(201,123,59,0.45);
   }
-
   *{ box-sizing: border-box; }
   html{ scroll-behavior: smooth; }
-
   body{
-    margin:0;
-    background: var(--cream);
-    color: var(--ink);
+    margin:0; background: var(--cream); color: var(--ink);
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    line-height: 1.55;
-    -webkit-font-smoothing: antialiased;
+    line-height: 1.55; -webkit-font-smoothing: antialiased;
   }
-
   h1,h2,h3,.display{
-    font-family: 'Fraunces', Georgia, serif;
-    font-weight: 600;
-    line-height: 1.12;
-    letter-spacing: -0.01em;
-    color: var(--pine-900);
-    margin: 0;
+    font-family: 'Fraunces', Georgia, serif; font-weight: 600; line-height: 1.14;
+    letter-spacing: -0.01em; color: var(--pine-900); margin: 0;
   }
-
   a{ color: inherit; }
   img{ max-width:100%; display:block; }
+  .wrap{ max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+  :focus-visible{ outline: 3px solid var(--amber); outline-offset: 3px; border-radius: 4px; }
 
-  .wrap{
-    max-width: 1120px;
-    margin: 0 auto;
-    padding: 0 24px;
-  }
-
-  :focus-visible{
-    outline: 3px solid var(--amber);
-    outline-offset: 3px;
-    border-radius: 4px;
-  }
-
-  /* ---------- Botones ---------- */
   .btn{
-    display:inline-flex;
-    align-items:center;
-    gap:8px;
-    padding: 14px 26px;
-    border-radius: 999px;
-    font-family:'Inter',sans-serif;
-    font-weight: 600;
-    font-size: 15.5px;
-    text-decoration:none;
-    border: 1.5px solid transparent;
-    cursor:pointer;
-    transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+    display:inline-flex; align-items:center; gap:8px; padding: 14px 26px; border-radius: 999px;
+    font-family:'Inter',sans-serif; font-weight: 600; font-size: 15.5px; text-decoration:none;
+    border: 1.5px solid transparent; cursor:pointer; transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
     white-space: nowrap;
   }
   .btn:hover{ transform: translateY(-2px); }
-  .btn-primary{
-    background: var(--pine-900);
-    color: var(--cream);
-    box-shadow: 0 6px 18px rgba(18,41,31,0.22);
-  }
+  .btn-primary{ background: var(--pine-900); color: var(--cream); box-shadow: 0 6px 18px rgba(18,41,31,0.22); }
   .btn-primary:hover{ background: var(--pine-800); box-shadow: 0 10px 24px rgba(18,41,31,0.28); }
-  .btn-ghost{
-    background: transparent;
-    color: var(--pine-900);
-    border-color: var(--pine-900);
-  }
+  .btn-ghost{ background: transparent; color: var(--pine-900); border-color: var(--pine-900); }
   .btn-ghost:hover{ background: var(--pine-900); color: var(--cream); }
-  .btn-amber{
-    background: var(--amber);
-    color: #fff;
-    box-shadow: 0 6px 18px rgba(201,123,59,0.30);
-  }
+  .btn-amber{ background: var(--amber); color: #fff; box-shadow: 0 6px 18px rgba(201,123,59,0.30); }
   .btn-amber:hover{ background: var(--amber-deep); }
   .btn-sm{ padding: 10px 20px; font-size: 14px; }
 
-  /* ---------- Header ---------- */
   header.site{
-    position: sticky;
-    top: 0;
-    z-index: 40;
-    background: rgba(244,239,227,0.86);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; z-index: 40;
+    background: rgba(244,239,227,0.86); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line);
   }
-  .nav{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding: 16px 0;
-  }
-  .brand{
-    display:flex;
-    align-items:center;
-    gap:10px;
-    text-decoration:none;
-    color: var(--pine-900);
-  }
+  .nav{ display:flex; align-items:center; justify-content:space-between; padding: 16px 0; }
+  .brand{ display:flex; align-items:center; gap:10px; text-decoration:none; color: var(--pine-900); }
   .brand-mark{
-    width: 34px; height: 34px;
-    border-radius: 9px;
-    background: var(--pine-900);
-    color: var(--cream);
-    display:flex; align-items:center; justify-content:center;
-    font-family:'Fraunces',serif;
-    font-weight:700;
-    font-size: 15px;
-    flex-shrink:0;
+    width: 34px; height: 34px; border-radius: 9px; background: var(--pine-900); border: 2px solid var(--amber);
+    color: var(--cream); display:flex; align-items:center; justify-content:center;
+    font-family:'Fraunces',serif; font-weight:700; font-size: 15px; flex-shrink:0;
   }
-  .brand-word{
-    font-family:'Fraunces',serif;
-    font-weight:600;
-    font-size: 21px;
-    letter-spacing: 0.01em;
-  }
-  .brand-tag{
-    display:none;
-    font-size: 12.5px;
-    color: var(--muted);
-    font-family:'Inter',sans-serif;
-    margin-left: 4px;
-    padding-left: 10px;
-    border-left: 1px solid var(--line);
-  }
+  .brand-word{ font-family:'Fraunces',serif; font-weight:600; font-size: 21px; letter-spacing: 0.01em; }
+  .brand-tag{ display:none; font-size: 12.5px; color: var(--muted); font-family:'Inter',sans-serif; margin-left: 4px; padding-left: 10px; border-left: 1px solid var(--line); }
   @media(min-width:720px){ .brand-tag{ display:inline-block; } }
 
-  /* ---------- Hero ---------- */
   .hero{
-    position: relative;
-    overflow: hidden;
-    padding: 76px 0 60px;
-    background-image:
-      linear-gradient(rgba(244,239,227,0.94), rgba(244,239,227,0.985)),
-      repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(18,41,31,0.055) 28px),
-      repeating-linear-gradient(90deg, transparent, transparent 27px, rgba(18,41,31,0.055) 28px);
+    position: relative; overflow: hidden; padding: 70px 0 56px;
+    background-image: linear-gradient(rgba(244,239,227,0.94), rgba(244,239,227,0.985)),
+      repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(18,41,31,0.05) 28px),
+      repeating-linear-gradient(90deg, transparent, transparent 27px, rgba(18,41,31,0.05) 28px);
   }
-  .hero-grid{
-    display:grid;
-    grid-template-columns: 1fr;
-    gap: 48px;
-    align-items:center;
-  }
-  @media(min-width:960px){
-    .hero-grid{ grid-template-columns: 1.05fr 0.95fr; gap: 40px; }
-  }
+  .hero-grid{ display:grid; grid-template-columns: 1fr; gap: 44px; align-items:center; }
+  @media(min-width:960px){ .hero-grid{ grid-template-columns: 1.05fr 0.95fr; gap: 40px; } }
   .eyebrow{
-    display:inline-flex;
-    align-items:center;
-    gap:8px;
-    font-size: 13px;
-    font-weight:600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--amber-deep);
-    margin-bottom: 18px;
+    display:inline-flex; align-items:center; gap:8px; font-size: 13px; font-weight:600; letter-spacing: 0.06em;
+    text-transform: uppercase; color: var(--amber-deep); margin-bottom: 16px;
   }
-  .eyebrow::before{
-    content:"";
-    width: 7px; height:7px;
-    border-radius: 50%;
-    background: var(--amber);
-    display:inline-block;
-  }
-  .hero h1{
-    font-size: clamp(34px, 5.2vw, 54px);
-    max-width: 15ch;
-  }
-  .hero p.lead{
-    margin-top: 22px;
-    font-size: 18px;
-    color: var(--muted);
-    max-width: 46ch;
-  }
-  .hero-ctas{
-    display:flex;
-    flex-wrap:wrap;
-    gap: 14px;
-    margin-top: 32px;
-  }
-  .hero-meta{
-    margin-top: 26px;
-    display:flex;
-    align-items:center;
-    gap: 10px;
-    font-size: 13.5px;
-    color: var(--muted);
-  }
+  .eyebrow::before{ content:""; width: 7px; height:7px; border-radius: 50%; background: var(--amber); display:inline-block; }
+  .hero h1{ font-size: clamp(30px, 4.4vw, 46px); max-width: 15.5ch; }
+  .hero p.lead{ margin-top: 20px; font-size: 17.5px; color: var(--muted); max-width: 46ch; }
+  .hero-ctas{ display:flex; flex-wrap:wrap; gap: 14px; margin-top: 28px; }
+  .hero-meta{ margin-top: 22px; display:flex; align-items:center; gap: 10px; font-size: 13.5px; color: var(--muted); }
   .hero-meta .dot{ width:6px; height:6px; border-radius:50%; background: var(--pine-600); }
 
-  /* Mockup visual */
-  .mock{
-    position: relative;
-    background: var(--pine-900);
-    border-radius: 20px;
-    padding: 18px;
-    box-shadow: 0 30px 60px -20px rgba(18,41,31,0.45), 0 2px 0 rgba(255,255,255,0.04) inset;
-    transform: rotate(1.2deg);
-  }
-  .mock-inner{
-    background: var(--card);
-    border-radius: 13px;
-    overflow:hidden;
-  }
-  .mock-topbar{
-    background: var(--pine-900);
-    color: var(--cream);
-    padding: 16px 18px;
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-start;
-    font-family:'Inter',sans-serif;
-  }
+  .mock{ position: relative; background: var(--pine-900); border-radius: 20px; padding: 18px;
+    box-shadow: 0 30px 60px -20px rgba(18,41,31,0.45); transform: rotate(1.2deg); }
+  .mock-inner{ background: var(--card); border-radius: 13px; overflow:hidden; }
+  .mock-topbar{ background: var(--pine-900); color: var(--cream); padding: 16px 18px; display:flex; justify-content:space-between; align-items:flex-start; }
   .mock-topbar small{ opacity:.75; font-size:11.5px; letter-spacing:.03em; text-transform:uppercase; }
   .mock-topbar strong{ display:block; font-family:'Fraunces',serif; font-size:19px; font-weight:600; margin-top:2px; }
-  .mock-pill{
-    background: var(--amber);
-    color:#fff;
-    font-size:11.5px;
-    font-weight:700;
-    padding: 6px 12px;
-    border-radius: 999px;
-  }
+  .mock-pill{ background: var(--amber); color:#fff; font-size:11.5px; font-weight:700; padding: 6px 12px; border-radius: 999px; }
   .mock-body{ padding: 16px 18px 20px; }
-  .mock-row{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    padding: 11px 12px;
-    border-radius: 10px;
-    background: var(--cream);
-    margin-bottom: 8px;
-    font-size: 14px;
-  }
+  .mock-row{ display:flex; align-items:center; justify-content:space-between; padding: 11px 12px; border-radius: 10px; background: var(--cream); margin-bottom: 8px; font-size: 14px; }
   .mock-row .name{ font-weight:600; color: var(--pine-800); }
-  .mock-row .badge{
-    font-size:12px; font-weight:700;
-    background: rgba(47,94,74,0.14);
-    color: var(--pine-700);
-    padding: 3px 10px; border-radius: 999px;
-  }
-  .mock-row .badge.amber{ background: rgba(201,123,59,0.16); color: var(--amber-deep); }
-  .mock-row .name.c1{ color: #8B4FA6; }
-  .mock-row .name.c2{ color: #2F6FA6; }
-  .mock-row .name.c3{ color: #B33E7A; }
-  .mock-row .dots{ color: var(--muted); font-weight:700; font-size:16px; }
-
-  .mock-tabs{
-    display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap;
-  }
-  .mock-tab{
-    font-size:11.5px; font-weight:700;
-    padding: 6px 11px; border-radius: 999px;
-    background: var(--cream);
-    color: var(--pine-700);
-    border: 1px solid var(--line);
-  }
-  .mock-tab.active{ background: var(--amber); color:#fff; border-color: var(--amber); }
-  .mock-tab.ghost{ background: transparent; color: var(--muted); border-style:dashed; }
-
-  .mock-tools{
-    display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;
-  }
-  .mock-tool{
-    font-size:11.5px; font-weight:600;
-    padding: 6px 10px; border-radius: 8px;
-    background: var(--cream);
-    color: var(--pine-800);
-    border: 1px solid var(--line);
-  }
-  .mock-tool.active{ border-color: var(--pine-700); background: var(--card); box-shadow: 0 1px 0 rgba(18,41,31,0.06); }
-
-  .mock-crit{
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--pine-700);
-    background: var(--cream);
-    border: 1px solid var(--line);
-    border-radius: 9px;
-    padding: 9px 12px;
-    margin-bottom: 10px;
-  }
-  .mock-float{
-    position:absolute;
-    background: var(--card);
-    border-radius: 12px;
-    box-shadow: 0 18px 34px rgba(18,41,31,0.22);
-    padding: 12px 14px;
-    font-size: 12.5px;
-    font-weight:600;
-    color: var(--pine-800);
-    display:flex; align-items:center; gap:8px;
-  }
+  .mock-row .badge{ font-size:12px; font-weight:700; background: rgba(47,94,74,0.14); color: var(--pine-700); padding: 3px 10px; border-radius: 999px; }
+  .mock-float{ position:absolute; background: var(--card); border-radius: 12px; box-shadow: 0 18px 34px rgba(18,41,31,0.22); padding: 12px 14px; font-size: 12.5px; font-weight:600; color: var(--pine-800); display:flex; align-items:center; gap:8px; }
   .mock-float.f1{ top: -18px; left: -22px; transform: rotate(-4deg); }
   .mock-float.f2{ bottom: -16px; right: -18px; transform: rotate(3deg); }
-  .mock-float svg{ flex-shrink:0; }
-  @media(max-width:520px){
-    .mock-float{ display:none; }
-  }
+  @media(max-width:520px){ .mock-float{ display:none; } }
 
-  /* ---------- Spiral divider (elemento de marca) ---------- */
-  .spiral{
-    display:flex;
-    justify-content:center;
-    gap: 18px;
-    padding: 26px 0;
-    background: var(--cream-deep);
-  }
-  .spiral span{
-    width: 9px; height: 9px;
-    border-radius: 50%;
-    background: var(--cream);
-    box-shadow: inset 0 2px 3px rgba(18,41,31,0.28), 0 1px 0 rgba(255,255,255,0.5);
-  }
+  .spiral{ display:flex; justify-content:center; gap: 18px; padding: 26px 0; background: var(--cream-deep); }
+  .spiral span{ width: 9px; height: 9px; border-radius: 50%; background: var(--cream); box-shadow: inset 0 2px 3px rgba(18,41,31,0.28), 0 1px 0 rgba(255,255,255,0.5); }
 
-  /* ---------- Secciones genéricas ---------- */
-  section{ padding: 76px 0; }
-  .section-head{
-    max-width: 640px;
-    margin: 0 auto 44px;
-    text-align:center;
-  }
+  section{ padding: 72px 0; }
+  .section-head{ max-width: 640px; margin: 0 auto 40px; text-align:center; }
   .section-head .eyebrow{ justify-content:center; }
-  .section-head h2{ font-size: clamp(28px,3.4vw,38px); }
+  .section-head h2{ font-size: clamp(26px,3.2vw,36px); }
   .section-head p{ margin-top:14px; color:var(--muted); font-size:16.5px; }
 
-  /* ---------- Features ---------- */
+  /* ---- Destacados (Informes / Alerta temprana) ---- */
+  .destacado{ background: var(--cream-deep); }
+  .destacado-grid{ display:grid; grid-template-columns: 1fr; gap: 40px; align-items:center; }
+  @media(min-width:940px){ .destacado-grid{ grid-template-columns: 1fr 1fr; gap: 56px; } }
+  .destacado-grid.invertido{ direction: rtl; }
+  .destacado-grid.invertido > *{ direction: ltr; }
+  .destacado h2{ font-size: clamp(24px,3vw,32px); max-width: 14ch; }
+  .destacado p.lead{ margin-top: 16px; color: var(--muted); font-size: 16.5px; max-width: 44ch; }
+  .destacado-check{ margin-top:20px; display:flex; flex-direction:column; gap:10px; }
+  .destacado-check div{ display:flex; align-items:flex-start; gap:10px; font-size:15px; color:var(--ink); }
+  .destacado-check svg{ flex-shrink:0; margin-top:2px; color: var(--pine-700); }
+
+  /* mock del informe */
+  .informe-card{ background: var(--pine-900); border-radius: 20px; padding: 18px; box-shadow: 0 30px 60px -20px rgba(18,41,31,0.4); }
+  .informe-inner{ background: var(--card); border-radius: 13px; padding: 20px; }
+  .informe-nombre{ font-family:'Fraunces',serif; font-weight:700; font-size: 20px; color: var(--pine-900); }
+  .informe-meta{ font-size: 12.5px; color: var(--muted); margin-top:2px; margin-bottom: 16px; }
+  .informe-nota-banner{ display:flex; align-items:center; gap:14px; background: rgba(46,125,70,0.08); border: 1.5px solid rgba(46,125,70,0.25); border-radius: 12px; padding: 12px 16px; margin-bottom:16px; }
+  .informe-nota-num{ font-family:'Fraunces',serif; font-weight:800; font-size: 34px; color: var(--green-ok); line-height:1; }
+  .informe-nota-msg{ font-weight:700; font-size: 14px; color: var(--green-ok); }
+  .informe-nota-msg small{ display:block; font-weight:500; font-size:11.5px; color: var(--muted); text-transform:uppercase; letter-spacing:.03em; }
+  .informe-criterio{ display:flex; align-items:baseline; gap:8px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+  .informe-criterio:last-child{ border-bottom:none; }
+  .informe-criterio .dot{ width:6px; height:6px; border-radius:50%; background: var(--ink); flex-shrink:0; }
+  .informe-criterio b{ color: var(--pine-800); }
+  .informe-criterio span.val{ color: var(--muted); }
+
+  /* mock de alerta temprana */
+  .alerta-card{ background: var(--pine-900); border-radius: 20px; padding: 18px; box-shadow: 0 30px 60px -20px rgba(18,41,31,0.4); }
+  .alerta-inner{ background: var(--card); border-radius: 13px; overflow:hidden; padding: 6px 0; }
+  .alerta-fila{ display:flex; align-items:center; justify-content:space-between; padding: 13px 18px; border-bottom: 1px solid var(--line); font-size: 14.5px; font-weight:600; color: var(--pine-800); }
+  .alerta-fila:last-child{ border-bottom:none; }
+  .alerta-fila .num{ color: var(--muted); font-weight:500; margin-right:8px; font-size:12.5px; }
+  .alerta-dot{ width:9px; height:9px; border-radius:50%; background: var(--amber); box-shadow: 0 0 0 3px rgba(201,123,59,0.22); display:inline-block; }
+  .alerta-popover{ margin: 10px 16px 14px; background: var(--pine-900); color: var(--cream); border-radius: 14px; padding: 14px 16px; }
+  .alerta-popover-title{ font-family:'Fraunces',serif; font-weight:600; font-size: 15px; display:flex; align-items:center; gap:7px; margin-bottom:5px; }
+  .alerta-popover-text{ font-size: 12.5px; color: #cfd6c9; line-height:1.4; margin-bottom:12px; }
+  .alerta-popover-btn{ background: var(--amber); color:#fff; text-align:center; padding: 9px 0; border-radius:999px; font-size:12.5px; font-weight:700; }
+
+  /* ---- Cómo se organiza ---- */
+  .levels{ display:grid; grid-template-columns: 1fr; gap: 14px; max-width: 880px; margin: 0 auto; }
+  @media(min-width:760px){ .levels{ grid-template-columns: 1fr auto 1fr auto 1fr; align-items:center; } }
+  .level-card{ background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 22px 22px 20px; }
+  .level-num{ display:inline-flex; align-items:center; justify-content:center; width: 30px; height:30px; border-radius: 50%; background: var(--pine-900); color: var(--cream); font-family:'Fraunces',serif; font-weight:600; font-size: 14px; margin-bottom: 12px; }
+  .level-card h3{ font-size: 17px; margin-bottom:6px; }
+  .level-card p{ margin:0; color:var(--muted); font-size:14px; }
+  .level-arrow{ display:flex; align-items:center; justify-content:center; color: var(--amber); transform: rotate(90deg); }
+  @media(min-width:760px){ .level-arrow{ transform:none; } }
+
+  .gallery-one{ margin-top: 46px; display:flex; justify-content:center; }
+  .gshot{ background: var(--pine-900); border-radius: 16px; padding: 12px; box-shadow: 0 20px 40px -18px rgba(18,41,31,0.35); max-width: 420px; width:100%; }
+  .gshot-inner{ background: var(--card); border-radius: 10px; overflow:hidden; }
+  .gshot-bar{ background: var(--pine-900); color:var(--cream); padding: 10px 13px; font-family:'Fraunces',serif; font-weight:600; font-size:13.5px; }
+  .gshot-body{ padding: 12px; font-family:'Inter',sans-serif; }
+  .gtable{ width:100%; border-collapse:collapse; font-size:12px; }
+  .gtable th{ background: var(--cream-deep); color:var(--pine-800); font-weight:700; padding:6px 7px; text-align:left; }
+  .gtable td{ padding:6px 7px; border-top:1px solid var(--line); color:var(--ink); }
+  .gtable .fin{ background: rgba(201,123,59,0.16); font-weight:700; color:var(--amber-deep); }
+  .gshot-caption{ text-align:center; margin-top:12px; font-size:13.5px; color:var(--muted); }
+
+  /* ---- Funciones ---- */
   .features{ background: var(--cream-deep); }
-  .feat-grid{
-    display:grid;
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
+  .feat-grid{ display:grid; grid-template-columns: 1fr; gap: 16px; }
   @media(min-width:640px){ .feat-grid{ grid-template-columns: 1fr 1fr; } }
   @media(min-width:980px){ .feat-grid{ grid-template-columns: 1fr 1fr 1fr; } }
+  .feat-card{ background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 24px; transition: box-shadow .25s ease, border-color .25s ease; }
+  .feat-card:hover{ box-shadow: 0 14px 30px rgba(18,41,31,0.10); border-color: rgba(47,94,74,0.35); }
+  .feat-icon{ width: 44px; height:44px; border-radius: 12px; background: rgba(47,94,74,0.10); color: var(--pine-700); display:flex; align-items:center; justify-content:center; margin-bottom: 16px; }
+  .feat-card:nth-child(3n+2) .feat-icon{ background: rgba(201,123,59,0.14); color: var(--amber-deep); }
+  .feat-card h3{ font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+  .feat-card p{ margin:0; color: var(--muted); font-size: 14.8px; }
 
-  .feat-card{
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 16px;
-    padding: 24px;
-    opacity: 0;
-    transform: translateY(14px);
-    transition: opacity .5s ease, transform .5s ease, box-shadow .25s ease, border-color .25s ease;
-  }
-  .feat-card.in{ opacity:1; transform: translateY(0); }
-  .feat-card:hover{
-    box-shadow: 0 14px 30px rgba(18,41,31,0.10);
-    border-color: rgba(47,94,74,0.35);
-  }
-  .feat-icon{
-    width: 44px; height:44px;
-    border-radius: 12px;
-    background: rgba(47,94,74,0.10);
-    color: var(--pine-700);
-    display:flex; align-items:center; justify-content:center;
-    margin-bottom: 16px;
-  }
-  .feat-card:nth-child(3n+2) .feat-icon,
-  .feat-card.accent .feat-icon{
-    background: rgba(201,123,59,0.14);
-    color: var(--amber-deep);
-  }
-  .feat-card h3{
-    font-size: 18px;
-    font-weight: 600;
-    margin-bottom: 8px;
-  }
-  .feat-card p{
-    margin:0;
-    color: var(--muted);
-    font-size: 14.8px;
-  }
-
-  /* ---------- FAQ ---------- */
-  .faq-list{
-    max-width: 780px;
-    margin: 0 auto;
-    display:flex;
-    flex-direction:column;
-    gap: 12px;
-  }
-  details{
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 6px 20px;
-  }
+  /* ---- FAQ ---- */
+  .faq-list{ max-width: 780px; margin: 0 auto; display:flex; flex-direction:column; gap: 12px; }
+  details{ background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 6px 20px; }
   details[open]{ border-color: rgba(201,123,59,0.5); }
-  summary{
-    list-style: none;
-    cursor: pointer;
-    padding: 16px 0;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap: 16px;
-    font-weight: 600;
-    font-size: 16.5px;
-    color: var(--pine-900);
-    font-family:'Fraunces',serif;
-  }
+  summary{ list-style: none; cursor: pointer; padding: 16px 0; display:flex; align-items:center; justify-content:space-between; gap: 16px; font-weight: 600; font-size: 16.5px; color: var(--pine-900); font-family:'Fraunces',serif; }
   summary::-webkit-details-marker{ display:none; }
-  .chev{
-    flex-shrink:0;
-    width: 26px; height:26px;
-    border-radius:50%;
-    background: var(--cream-deep);
-    display:flex; align-items:center; justify-content:center;
-    transition: transform .25s ease, background .25s ease;
-  }
+  .chev{ flex-shrink:0; width: 26px; height:26px; border-radius:50%; background: var(--cream-deep); display:flex; align-items:center; justify-content:center; transition: transform .25s ease, background .25s ease; }
   details[open] .chev{ transform: rotate(45deg); background: var(--amber); color:#fff; }
-  .faq-answer{
-    padding: 0 0 20px;
-    color: var(--muted);
-    font-size: 15.2px;
-    max-width: 64ch;
-  }
+  .faq-answer{ padding: 0 0 20px; color: var(--muted); font-size: 15.2px; max-width: 64ch; }
 
-  /* ---------- CTA band ---------- */
-  .cta-band{
-    background: var(--pine-900);
-    color: var(--cream);
-    text-align:center;
-    background-image:
-      radial-gradient(600px 300px at 15% 20%, rgba(201,123,59,0.16), transparent 60%),
-      radial-gradient(600px 300px at 85% 80%, rgba(47,94,74,0.35), transparent 60%);
-  }
-  .cta-band h2{ color: var(--cream); font-size: clamp(26px,3.6vw,36px); max-width: 20ch; margin:0 auto; }
+  .cta-band{ background: var(--pine-900); color: var(--cream); text-align:center;
+    background-image: radial-gradient(600px 300px at 15% 20%, rgba(201,123,59,0.16), transparent 60%), radial-gradient(600px 300px at 85% 80%, rgba(47,94,74,0.35), transparent 60%); }
+  .cta-band h2{ color: var(--cream); font-size: clamp(24px,3.4vw,34px); max-width: 22ch; margin:0 auto; }
   .cta-band p{ color: rgba(244,239,227,0.75); margin-top:14px; font-size:16px; }
   .cta-band .hero-ctas{ justify-content:center; margin-top:30px; }
 
-  /* ---------- Footer ---------- */
-  footer{
-    background: var(--cream-deep);
-    padding: 52px 0 34px;
-    border-top: 1px solid var(--line);
-  }
-  .foot-grid{
-    display:grid;
-    grid-template-columns: 1fr;
-    gap: 32px;
-    align-items:start;
-  }
+  footer{ background: var(--cream-deep); padding: 52px 0 34px; border-top: 1px solid var(--line); }
+  .foot-grid{ display:grid; grid-template-columns: 1fr; gap: 32px; align-items:start; }
   @media(min-width:760px){ .foot-grid{ grid-template-columns: 1.2fr 1fr; } }
   .foot-brand p{ color:var(--muted); font-size:14.5px; max-width: 40ch; margin-top:10px; }
   .contact-list{ display:flex; flex-direction:column; gap:12px; }
-  .contact-item{
-    display:flex;
-    align-items:center;
-    gap:12px;
-    text-decoration:none;
-    color: var(--pine-900);
-    font-weight:600;
-    font-size:15px;
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 13px 16px;
-    transition: border-color .2s ease, transform .2s ease;
-  }
+  .contact-item{ display:flex; align-items:center; gap:12px; text-decoration:none; color: var(--pine-900); font-weight:600; font-size:15px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 13px 16px; transition: border-color .2s ease, transform .2s ease; }
   .contact-item:hover{ border-color: var(--amber); transform: translateX(3px); }
-  .contact-item .ic{
-    width:36px; height:36px; border-radius:50%;
-    background: rgba(47,94,74,0.10);
-    color: var(--pine-700);
-    display:flex; align-items:center; justify-content:center;
-    flex-shrink:0;
-  }
-  .foot-bottom{
-    margin-top: 44px;
-    padding-top: 22px;
-    border-top: 1px solid var(--line);
-    display:flex;
-    flex-wrap:wrap;
-    gap:10px;
-    justify-content:space-between;
-    font-size: 13px;
-    color: var(--muted);
-  }
+  .contact-item .ic{ width:36px; height:36px; border-radius:50%; background: rgba(47,94,74,0.10); color: var(--pine-700); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .foot-bottom{ margin-top: 44px; padding-top: 22px; border-top: 1px solid var(--line); display:flex; flex-wrap:wrap; gap:10px; justify-content:space-between; font-size: 13px; color: var(--muted); }
 
-  /* ---------- Cómo se organiza ---------- */
-  .levels{
-    display:grid;
-    grid-template-columns: 1fr;
-    gap: 14px;
-    max-width: 880px;
-    margin: 0 auto;
-  }
-  @media(min-width:760px){
-    .levels{ grid-template-columns: 1fr auto 1fr auto 1fr; align-items:center; }
-  }
-  .level-card{
-    background: var(--card);
-    border: 1px solid var(--line);
-    border-radius: 16px;
-    padding: 22px 22px 20px;
-  }
-  .level-num{
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    width: 30px; height:30px;
-    border-radius: 50%;
-    background: var(--pine-900);
-    color: var(--cream);
-    font-family:'Fraunces',serif;
-    font-weight:600;
-    font-size: 14px;
-    margin-bottom: 12px;
-  }
-  .level-card h3{ font-size: 17px; margin-bottom:6px; }
-  .level-card p{ margin:0; color:var(--muted); font-size:14px; }
-  .level-arrow{
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    color: var(--amber);
-    transform: rotate(90deg);
-  }
-  @media(min-width:760px){ .level-arrow{ transform:none; } }
-
-  /* ---------- Mini galería de capturas ---------- */
-  .gallery{
-    display:grid;
-    grid-template-columns: 1fr;
-    gap: 20px;
-    margin-top: 52px;
-  }
-  @media(min-width:760px){ .gallery{ grid-template-columns: repeat(3, 1fr); } }
-  .gshot{
-    background: var(--pine-900);
-    border-radius: 16px;
-    padding: 12px;
-    box-shadow: 0 20px 40px -18px rgba(18,41,31,0.35);
-  }
-  .gshot-inner{ background: var(--card); border-radius: 10px; overflow:hidden; }
-  .gshot-bar{
-    background: var(--pine-900); color:var(--cream);
-    padding: 10px 13px; font-family:'Fraunces',serif; font-weight:600; font-size:13.5px;
-    display:flex; align-items:center; justify-content:space-between;
-  }
-  .gshot-body{ padding: 12px; font-family:'Inter',sans-serif; }
-  .gshot-caption{
-    text-align:center; margin-top:12px; font-size:13.5px; color:var(--muted);
-  }
-  /* Planilla */
-  .gtable{ width:100%; border-collapse:collapse; font-size:11px; }
-  .gtable th{ background: var(--cream-deep); color:var(--pine-800); font-weight:700; padding:5px 6px; text-align:left; }
-  .gtable td{ padding:5px 6px; border-top:1px solid var(--line); color:var(--ink); }
-  .gtable .fin{ background: rgba(201,123,59,0.16); font-weight:700; color:var(--amber-deep); }
-  /* Recuperatorio */
-  .gstat-row{ display:flex; justify-content:space-between; align-items:center; background:var(--cream); border-radius:8px; padding:8px 10px; margin-bottom:6px; font-size:12.5px; font-weight:600; color:var(--pine-800); }
-  .gstat-row .aus{ background:#B33E3E; color:#fff; font-size:10.5px; font-weight:700; padding:3px 8px; border-radius:999px; }
-  .gstat-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:10px; text-align:center; }
-  .gstat-grid div strong{ display:block; font-family:'Fraunces',serif; font-size:16px; color:var(--pine-900); }
-  .gstat-grid div span{ font-size:9.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.03em; }
-  /* Horario */
-  .gsched{ display:grid; grid-template-columns: 34px repeat(3,1fr); gap:4px; font-size:10px; }
-  .gsched .h{ color:var(--muted); text-align:right; padding-top:2px; }
-  .gsched .day{ font-weight:700; color:var(--pine-800); text-align:center; padding-bottom:4px; font-size:10.5px; }
-  .gsched .block{ border-radius:6px; padding:5px 4px; font-size:9.5px; font-weight:700; color:#fff; text-align:center; }
-  .gsched .b1{ background: var(--amber); }
-  .gsched .b2{ background: var(--pine-600); }
-  .gsched .empty{ }
-
-  /* ---------- Volver arriba ---------- */
-  #toTop{
-    position: fixed;
-    right: 20px;
-    bottom: 20px;
-    width: 46px; height:46px;
-    border-radius: 50%;
-    background: var(--pine-900);
-    color: var(--cream);
-    border: none;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    cursor:pointer;
-    box-shadow: 0 10px 24px rgba(18,41,31,0.32);
-    opacity:0;
-    transform: translateY(10px);
-    pointer-events:none;
-    transition: opacity .25s ease, transform .25s ease, background .2s ease;
-    z-index: 50;
-  }
+  #toTop{ position: fixed; right: 20px; bottom: 20px; width: 46px; height:46px; border-radius: 50%; background: var(--pine-900); color: var(--cream); border: none; display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow: 0 10px 24px rgba(18,41,31,0.32); opacity:0; transform: translateY(10px); pointer-events:none; transition: opacity .25s ease, transform .25s ease, background .2s ease; z-index: 50; }
   #toTop.show{ opacity:1; transform:translateY(0); pointer-events:auto; }
   #toTop:hover{ background: var(--pine-800); }
 
-    html{ scroll-behavior:auto; }
-    .feat-card{ transition:none; opacity:1; transform:none; }
-    .btn, .contact-item{ transition:none; }
-  }
+  @media (prefers-reduced-motion: reduce){ html{ scroll-behavior:auto; } .btn, .contact-item, .feat-card{ transition:none; } }
 </style>
 </head>
 <body>
@@ -650,12 +252,12 @@
 <main id="top">
 
   <!-- HERO -->
-  <section class="hero" style="padding-top:76px;">
+  <section class="hero">
     <div class="wrap hero-grid">
       <div>
         <span class="eyebrow">Hecho por y para docentes</span>
-        <h1>Tu cuaderno docente de siempre, ahora inteligente y 100% digital.</h1>
-        <p class="lead">Todo tu ciclo lectivo organizado sin complicaciones. CISD es la plataforma integral que simplifica el registro de asistencias, notas e informes pedagógicos en una sola pantalla.</p>
+        <h1>Cada alumno merece un informe tan prolijo como tu trabajo en el aula.</h1>
+        <p class="lead">CISD arma solo, con lo que ya vas cargando día a día, un informe individual detallado de cada alumno — tanto del que va bien, como del que necesita un seguimiento más cercano.</p>
         <div class="hero-ctas">
           <a class="btn btn-primary" href="https://cisd.com.ar">Entrar a CISD</a>
           <a class="btn btn-ghost" href="#funciones">Ver qué incluye</a>
@@ -673,31 +275,83 @@
             <div>
               <small>Escuela Nº 1 "Los Álamos" · Matemática</small>
               <strong>3° Año A</strong>
-              <small style="display:block;margin-top:2px;opacity:.65;">3 alumnos</small>
             </div>
             <span class="mock-pill">Asistencia</span>
           </div>
           <div class="mock-body">
-            <div class="mock-tabs">
-              <span class="mock-tab active">1° Cuatrim.</span>
-              <span class="mock-tab">2° Cuatrim.</span>
-              <span class="mock-tab ghost">Carga masiva</span>
-            </div>
-            <div class="mock-tools">
-              <span class="mock-tool active">Planilla</span>
-              <span class="mock-tool">Diciembre</span>
-              <span class="mock-tool">Febrero</span>
-              <span class="mock-tool">Informe</span>
-            </div>
-            <div class="mock-crit">Criterios de Seguimiento (4) ▾</div>
-            <div class="mock-row"><span class="name c1">Alumno A</span><span class="dots">⋮</span></div>
-            <div class="mock-row"><span class="name c2">Alumno B</span><span class="dots">⋮</span></div>
-            <div class="mock-row"><span class="name c3">Alumno C</span><span class="dots">⋮</span></div>
+            <div class="mock-row"><span class="name">Alumno A</span><span class="badge">7,0</span></div>
+            <div class="mock-row"><span class="name">Alumno B</span><span class="badge">Presente</span></div>
+            <div class="mock-row"><span class="name">Alumno C</span><span class="badge">6,0</span></div>
           </div>
         </div>
         <div class="mock-float f2">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
           Planilla automática
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="spiral" aria-hidden="true">
+    <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+  </div>
+
+  <!-- DESTACADO: INFORMES -->
+  <section class="destacado">
+    <div class="wrap destacado-grid">
+      <div>
+        <span class="eyebrow">Informes individuales</span>
+        <h2>Informes que dan ganas de mostrar.</h2>
+        <p class="lead">Nada de tablas frías: cada informe arma un resumen claro, con la nota destacada bien arriba y un mensaje directo — aprobado o a recuperar — para que cualquiera lo entienda de un vistazo.</p>
+        <div class="destacado-check">
+          <div><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg> Se arma solo con las notas y criterios que ya cargaste</div>
+          <div><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg> Listo para descargar en PDF o Word</div>
+          <div><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg> Prolijo para entregar a la familia, sin pasarlo en limpio</div>
+        </div>
+      </div>
+      <div class="informe-card" aria-hidden="true">
+        <div class="informe-inner">
+          <div class="informe-nombre">Acosta Ana</div>
+          <div class="informe-meta">Escuela 73 · 5° Año · Matemáticas</div>
+          <div class="informe-nota-banner">
+            <div class="informe-nota-num">8</div>
+            <div class="informe-nota-msg"><small>Nota final</small>¡Felicitaciones! Materia aprobada</div>
+          </div>
+          <div class="informe-criterio"><span class="dot"></span><b>Evaluación escrita</b><span class="val">— 1°: 8</span></div>
+          <div class="informe-criterio"><span class="dot"></span><b>Conducta</b><span class="val">— Muy buena</span></div>
+          <div class="informe-criterio"><span class="dot"></span><b>Participación</b><span class="val">— Excelente</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="spiral" aria-hidden="true">
+    <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+  </div>
+
+  <!-- DESTACADO: ALERTA TEMPRANA -->
+  <section class="destacado" style="background:var(--cream);">
+    <div class="wrap destacado-grid invertido">
+      <div>
+        <span class="eyebrow">Alerta temprana</span>
+        <h2>Para seguir de cerca a quien lo necesita, a tiempo.</h2>
+        <p class="lead">CISD cruza solo las notas bajas y las señales de riesgo, y te avisa con un punto discreto junto al nombre del alumno — antes de que se convierta en un problema grande.</p>
+        <div class="destacado-check">
+          <div><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg> Aviso discreto, no interrumpe tu trabajo</div>
+          <div><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg> Vos decidís cuándo marcarlo como "ya lo estoy siguiendo"</div>
+          <div><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg> Nunca se apaga solo — si reaparece una señal, te vuelve a avisar</div>
+        </div>
+      </div>
+      <div class="alerta-card" aria-hidden="true">
+        <div class="alerta-inner">
+          <div class="alerta-fila"><span><span class="num">1.</span>Acosta Ana</span></div>
+          <div class="alerta-fila"><span><span class="num">2.</span>González Karen</span><span class="alerta-dot"></span></div>
+          <div class="alerta-fila"><span><span class="num">3.</span>Iglesias Gustavo</span></div>
+        </div>
+        <div class="alerta-popover">
+          <div class="alerta-popover-title"><span class="alerta-dot"></span>Para seguir de cerca</div>
+          <div class="alerta-popover-text">2 notas bajas en las últimas 3 semanas (Evaluación escrita, Conducta).</div>
+          <div class="alerta-popover-btn">✓ Ya lo estoy siguiendo</div>
         </div>
       </div>
     </div>
@@ -740,7 +394,7 @@
         </div>
       </div>
 
-      <div class="gallery">
+      <div class="gallery-one">
         <div>
           <div class="gshot">
             <div class="gshot-inner">
@@ -757,41 +411,6 @@
           </div>
           <p class="gshot-caption">Se arma sola con lo cargado en cada alumno.</p>
         </div>
-
-        <div>
-          <div class="gshot">
-            <div class="gshot-inner">
-              <div class="gshot-bar"><span>Recuperatorio Diciembre</span></div>
-              <div class="gshot-body">
-                <div class="gstat-row"><span>Alumno B</span><span class="aus">Ausente</span></div>
-                <div class="gstat-row"><span>Alumno C</span><span style="color:var(--pine-700)">Nota: 6</span></div>
-                <div class="gstat-grid">
-                  <div><strong>2</strong><span>Total</span></div>
-                  <div><strong>1</strong><span>Aprob.</span></div>
-                  <div><strong>0</strong><span>Desap.</span></div>
-                  <div><strong>1</strong><span>Ausen.</span></div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <p class="gshot-caption">Respaldo permanente de recuperatorios, diciembre y febrero.</p>
-        </div>
-
-        <div>
-          <div class="gshot">
-            <div class="gshot-inner">
-              <div class="gshot-bar"><span>Mi horario armado</span></div>
-              <div class="gshot-body">
-                <div class="gsched">
-                  <div class="h"></div><div class="day">Lun</div><div class="day">Mar</div><div class="day">Mié</div>
-                  <div class="h">08</div><div class="block b1">3° A</div><div class="empty"></div><div class="block b2">5°</div>
-                  <div class="h">09</div><div class="empty"></div><div class="block b2">5°</div><div class="empty"></div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <p class="gshot-caption">Todos tus horarios, en una sola vista semanal.</p>
-        </div>
       </div>
     </div>
   </section>
@@ -805,14 +424,13 @@
     <div class="wrap">
       <div class="section-head">
         <span class="eyebrow">Todo en un solo lugar</span>
-        <h2>Un pantallazo de lo que vas a poder hacer</h2>
+        <h2>El resto de lo que vas a tener a mano</h2>
         <p>Pensado para el día a día real de un aula, desde el primer día de clases hasta el recuperatorio de febrero.</p>
       </div>
 
-      <div class="feat-grid" id="featGrid">
-
+      <div class="feat-grid">
         <div class="feat-card">
-          <div class="feat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 12l9 4 9-4M3 17l9 4 9-4" opacity="0"/><path d="M7 9v6c0 1 2 3 5 3s5-2 5-3V9"/></svg></div>
+          <div class="feat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M7 9v6c0 1 2 3 5 3s5-2 5-3V9"/></svg></div>
           <h3>Organización total</h3>
           <p>Colegios → cursos → alumnos, todo ordenado y a mano en segundos.</p>
         </div>
@@ -830,12 +448,6 @@
         </div>
 
         <div class="feat-card">
-          <div class="feat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.5-7 8-7s8 3 8 7"/></svg></div>
-          <h3>Ficha individual de cada alumno</h3>
-          <p>Historial completo de notas y registros, con fecha, todo en un solo lugar.</p>
-        </div>
-
-        <div class="feat-card">
           <div class="feat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg></div>
           <h3>Planillas de calificaciones automáticas</h3>
           <p>Se arman solas con lo cargado, con promedios calculados al instante.</p>
@@ -848,29 +460,10 @@
         </div>
 
         <div class="feat-card">
-          <div class="feat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><path d="M6 18h12v3H6z"/><rect x="4" y="9" width="16" height="8" rx="1.5"/></svg></div>
-          <h3>Informes listos para imprimir</h3>
-          <p>Generá PDF o Word con un clic, prolijos y listos para entregar.</p>
-        </div>
-
-        <div class="feat-card">
-          <div class="feat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg></div>
-          <h3>Mi horario</h3>
-          <p>Tu horario de clases siempre a mano, organizado por día.</p>
-        </div>
-
-        <div class="feat-card">
-          <div class="feat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
-          <h3>Bitácora</h3>
-          <p>Un espacio para anotar lo importante de cada jornada, sin depender de papeles sueltos.</p>
-        </div>
-
-        <div class="feat-card">
           <div class="feat-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11z"/><path d="M9 12l2 2 4-4"/></svg></div>
           <h3>Tus datos, siempre seguros</h3>
           <p>Respaldo automático de cada guardado, para que nunca pierdas tu trabajo.</p>
         </div>
-
       </div>
     </div>
   </section>
@@ -888,7 +481,7 @@
       </div>
 
       <div class="faq-list">
-        <details>
+        <details open>
           <summary>¿Tengo que instalar algo en el celular o la compu?
             <span class="chev"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
           </summary>
@@ -899,21 +492,7 @@
           <summary>¿Puedo usarla desde el celular en el aula, o necesito la computadora sí o sí?
             <span class="chev"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
           </summary>
-          <div class="faq-answer">Podés usar CISD desde el celular, la tablet o la computadora, en cualquier momento. Está pensada para tomar asistencia y cargar notas directo desde el aula, sin depender de una compu.</div>
-        </details>
-
-        <details>
-          <summary>¿Es difícil de usar o lleva mucho tiempo aprender a configurar los cursos?
-            <span class="chev"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
-          </summary>
-          <div class="faq-answer">No. Cada pantalla tiene un tour explicativo que te guía paso a paso la primera vez. En la práctica, empezar lleva solo 4 pasos: creás tu colegio, sumás el curso, cargás tus alumnos y activás los criterios que vas a usar — minutos, no horas.</div>
-        </details>
-
-        <details>
-          <summary>¿Qué pasa si se me rompe o me roban el celular? ¿Pierdo las notas y asistencias del trimestre?
-            <span class="chev"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
-          </summary>
-          <div class="faq-answer">No perdés nada. Tus datos no viven en el celular, viven guardados en la nube, con respaldo automático de cada cambio. Entrás desde cualquier otro dispositivo y encontrás todo tal cual lo dejaste.</div>
+          <div class="faq-answer">Podés usar CISD desde el celular, la tablet o la computadora, en cualquier momento. Está pensada para trabajar directo desde el aula, sin depender de una compu.</div>
         </details>
 
         <details>
@@ -936,7 +515,7 @@
   <!-- CTA BAND -->
   <section class="cta-band">
     <div class="wrap">
-      <h2>¿Lista, listo para dejar el cuaderno de papel?</h2>
+      <h2>¿Lista, listo para que cada alumno tenga el seguimiento que merece?</h2>
       <p>Registrate con tu correo y armá tu primer curso en un par de minutos.</p>
       <div class="hero-ctas">
         <a class="btn btn-amber" href="https://cisd.com.ar">Entrar a CISD</a>
@@ -980,33 +559,12 @@
 
 <script>
   document.getElementById('year').textContent = new Date().getFullYear();
-
-  // Botón "volver arriba"
   const toTop = document.getElementById('toTop');
   window.addEventListener('scroll', () => {
     if(window.scrollY > 600){ toTop.classList.add('show'); }
     else{ toTop.classList.remove('show'); }
   });
-  toTop.addEventListener('click', () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
-
-
-  // Aparición suave de las tarjetas de funciones al hacer scroll
-  const cards = document.querySelectorAll('.feat-card');
-  if('IntersectionObserver' in window){
-    const io = new IntersectionObserver((entries)=>{
-      entries.forEach((entry, i)=>{
-        if(entry.isIntersecting){
-          setTimeout(()=> entry.target.classList.add('in'), i * 40);
-          io.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.15 });
-    cards.forEach(c => io.observe(c));
-  } else {
-    cards.forEach(c => c.classList.add('in'));
-  }
+  toTop.addEventListener('click', () => { window.scrollTo({ top: 0, behavior: 'smooth' }); });
 </script>
 
 </body>
