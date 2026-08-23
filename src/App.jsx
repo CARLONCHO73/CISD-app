@@ -4205,7 +4205,7 @@ function CalendarioAsistencia({ fechaInicial, diasCurso, diasClaseConfig, onSele
 }
 
 function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlternarCelda, onAlternarTodosPresentes, onSetMotivo, hayHorarioNocturno, onSetDiasClase, onCerrar, tourVisto, onMarcarTourVisto }) {
-  const [fecha, setFecha] = useState(() => leerUltimoLugar("asistenciaFecha") || hoyISO());
+  const [fecha, setFecha] = useState(() => hoyISO());
   const [motivoAbierto, setMotivoAbierto] = useState(false);
   const [borradorMotivo, setBorradorMotivo] = useState("");
   const [borradorTurno, setBorradorTurno] = useState("todo");
@@ -4213,7 +4213,6 @@ function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlte
   const [autorizadoEdicionPasada, setAutorizadoEdicionPasada] = useState(false);
   const [confirmarSobrescribir, setConfirmarSobrescribir] = useState(false);
   const [calendarioAbierto, setCalendarioAbierto] = useState(() => !!leerUltimoLugar("asistenciaCalendarioAbierto"));
-  useEffect(() => { guardarUltimoLugar("asistenciaFecha", fecha); }, [fecha]);
   useEffect(() => { guardarUltimoLugar("asistenciaCalendarioAbierto", calendarioAbierto); }, [calendarioAbierto]);
   const [tourActivo, setTourActivo] = useState(!tourVisto);
   const refFecha = useRef(null);
@@ -4306,8 +4305,15 @@ function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlte
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
           <span onClick={() => setFecha(sumarDiasFecha(fecha, -1))} style={flechaBtnStyle}><ChevronLeft size={18} strokeWidth={2.4} /></span>
           <div style={{ flex: 1, textAlign: "center", minWidth: 0 }}>
-            <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, fontWeight: 700, color: COLORS.pineDark, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {formatFechaLarga(fecha)}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+              <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, fontWeight: 700, color: COLORS.pineDark, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                {formatFechaLarga(fecha)}
+              </div>
+              {fecha === hoy && (
+                <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 9.5, fontWeight: 700, color: COLORS.white, background: COLORS.pine, borderRadius: 999, padding: "2px 7px", flexShrink: 0 }}>
+                  HOY
+                </span>
+              )}
             </div>
             {esDiaConfigurado && (
               <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 10.5, fontWeight: 600, color: COLORS.ochre, marginTop: 1 }}>
