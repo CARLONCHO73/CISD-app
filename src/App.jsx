@@ -229,6 +229,32 @@ function esMarcaAusente(valor) {
   return v === "aus" || v === "ausente";
 }
 
+// Franja horaria de un bloque según su hora de inicio (mismo criterio que
+// franjaHorariaActual: noche es antes de las 7 o desde las 19).
+function franjaDeHora(horaTexto) {
+  if (!horaTexto) return null;
+  const h = parseInt(horaTexto.split(":")[0], 10);
+  if (Number.isNaN(h)) return null;
+  if (h >= 7 && h < 13) return "manana";
+  if (h >= 13 && h < 19) return "tarde";
+  return "noche";
+}
+
+// Verdadero si el docente tiene, en CUALQUIER colegio/curso, al menos un
+// bloque de horario cargado en franja nocturna — se usa para decidir si
+// ofrecer "Noche" como opción al marcar "Sin clase", sin importar si es
+// justo ese curso puntual el que tiene el horario nocturno.
+const ETIQUETA_TURNO = { manana: "Mañana", tarde: "Tarde", noche: "Noche" };
+
+function tieneHorarioNocturno(diasClasePorCurso) {
+  return Object.values(diasClasePorCurso || {}).some((bloques) =>
+    (bloques || []).some((item) => {
+      const inicio = typeof item === "object" ? item.inicio : "";
+      return franjaDeHora(inicio) === "noche";
+    })
+  );
+}
+
 // ---------- Saludo de bienvenida por franja horaria ----------
 // Determina la franja del momento en que se abre la app, para elegir el
 // saludo correspondiente. Se muestra como máximo una vez por franja y por
@@ -4060,7 +4086,7 @@ function CalendarioAsistencia({ fechaInicial, diasCurso, diasClaseConfig, onSele
 
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 12, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 10.5, color: COLORS.inkSoft }}>
             <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-              <span style={{ width: 10, height: 10, borderRadius: 3, background: COLORS.ochre, display: "inline-block" }} /> No trabajado
+              <span style={{ width: 10, height: 10, borderRadius: 3, background: COLORS.ochre, display: "inline-block" }} /> Sin clase
             </span>
             <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <span style={{ width: 10, height: 10, borderRadius: 3, border: `2px solid ${COLORS.pine}`, display: "inline-block", boxSizing: "border-box" }} /> Seleccionado
@@ -4084,7 +4110,7 @@ function CalendarioAsistencia({ fechaInicial, diasCurso, diasClaseConfig, onSele
               if (dia == null) return <div key={`vacio-${i}`} />;
               const fechaCelda = fechaISOdesdeAnioMesDia(anio, mes, dia);
               const registro = diasCurso[fechaCelda];
-              const marcado = !!(registro && registro.motivo);
+              const marcado = !!(registro && (registro.motivo || registro.motivoParcial));
               const esSeleccionado = fechaCelda === fechaInicial;
               const esHoy = fechaCelda === hoy;
               const codigoSemana = DIAS_SEMANA[new Date(anio, mes, dia).getDay()].code;
@@ -4142,10 +4168,10 @@ function CalendarioAsistencia({ fechaInicial, diasCurso, diasClaseConfig, onSele
                 {formatFechaLarga(popoverFecha)}
               </div>
               <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, color: COLORS.inkSoft, marginBottom: 4 }}>
-                Día marcado como no trabajado
+                {diasCurso[popoverFecha].motivo ? "Día marcado como sin clase" : `Sin clase — ${ETIQUETA_TURNO[diasCurso[popoverFecha].motivoParcial.turno]}`}
               </div>
               <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: COLORS.ink, fontWeight: 600, marginBottom: 14, wordBreak: "break-word" }}>
-                {diasCurso[popoverFecha].motivo}
+                {diasCurso[popoverFecha].motivo || diasCurso[popoverFecha].motivoParcial.texto}
               </div>
               <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
                 <span onClick={() => onEditarDia(popoverFecha)} style={{ ...chipBase, background: COLORS.pine, color: COLORS.white }}>Editar</span>
@@ -4158,8 +4184,8 @@ function CalendarioAsistencia({ fechaInicial, diasCurso, diasClaseConfig, onSele
 
       {confirmarQuitarFecha && (
         <ModalConfirmacion
-          titulo="Quitar marca de día no trabajado"
-          texto={`¿Confirmás que querés quitar la marca de "día no trabajado" del ${formatFechaLarga(confirmarQuitarFecha)}? El motivo cargado se va a borrar (aunque las marcas de asistencia previas, si había, no se pierden).`}
+          titulo="Quitar marca de sin clase"
+          texto={`¿Confirmás que querés quitar la marca de "sin clase" del ${formatFechaLarga(confirmarQuitarFecha)}? El motivo cargado se va a borrar (aunque las marcas de asistencia previas, si había, no se pierden).`}
           botones={[
             <span
               key="si"
@@ -4178,10 +4204,11 @@ function CalendarioAsistencia({ fechaInicial, diasCurso, diasClaseConfig, onSele
   );
 }
 
-function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlternarCelda, onAlternarTodosPresentes, onSetMotivo, onSetDiasClase, onCerrar, tourVisto, onMarcarTourVisto }) {
+function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlternarCelda, onAlternarTodosPresentes, onSetMotivo, hayHorarioNocturno, onSetDiasClase, onCerrar, tourVisto, onMarcarTourVisto }) {
   const [fecha, setFecha] = useState(() => leerUltimoLugar("asistenciaFecha") || hoyISO());
   const [motivoAbierto, setMotivoAbierto] = useState(false);
   const [borradorMotivo, setBorradorMotivo] = useState("");
+  const [borradorTurno, setBorradorTurno] = useState("todo");
   const [pendienteCelda, setPendienteCelda] = useState(null); // { alumnoId }
   const [autorizadoEdicionPasada, setAutorizadoEdicionPasada] = useState(false);
   const [confirmarSobrescribir, setConfirmarSobrescribir] = useState(false);
@@ -4196,15 +4223,16 @@ function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlte
 
   const pasos = [
     { titulo: "Tomar asistencia", texto: "Por defecto es el día de hoy. Usá las flechas para ir al día anterior o siguiente, o tocá la fecha para elegir cualquier día del calendario.", ref: refFecha },
-    { titulo: "Día no trabajado", texto: "Si no hubo clase (licencia, artículo, etc.), marcalo aquí y detallá el motivo. Ese día se pinta gris y no cuenta para el % de asistencia.", ref: refMotivo },
+    { titulo: "Sin clase", texto: "Si no hubo clase (licencia, paro, etc.), marcalo aquí — podés elegir si fue todo el día o solo un turno. Se pinta naranja y no cuenta para el % de asistencia.", ref: refMotivo },
     { titulo: "Marcar a cada alumno", texto: "Tocá el casillero de un alumno para ir alternando: presente (blanco) → ausente (rojo, A) → tardanza (naranja, T) → justificado (celeste, J).", ref: refCelda },
-    { titulo: "Calendario del mes", texto: "Acá ves el mes completo: los días pintados de naranja son los marcados como no trabajado. Tocá uno para ver el motivo, editarlo o quitar la marca.", ref: refCalendario },
+    { titulo: "Calendario del mes", texto: "Acá ves el mes completo: los días pintados de naranja son los marcados como sin clase. Tocá uno para ver el motivo, editarlo o quitar la marca.", ref: refCalendario },
   ];
 
   const hoy = hoyISO();
   const esPasado = fecha < hoy;
   const diaActual = diasCurso[fecha] || { motivo: null, marcas: {} };
   const noTrabajado = !!diaActual.motivo;
+  const sinClaseParcial = diaActual.motivoParcial || null;
   const todosPresentesActivo = alumnos.length > 0 && alumnos.every((al) => (diaActual.marcas || {})[al.id] === "P");
   const diaSemana = codigoDiaSemana(fecha);
   const esDiaConfigurado = tieneDiaConfigurado(diasClaseConfig, diaSemana);
@@ -4220,21 +4248,22 @@ function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlte
     setPendienteCelda(null);
   }
   function abrirMotivo() {
-    setBorradorMotivo(diaActual.motivo || "");
+    setBorradorMotivo(diaActual.motivo || (diaActual.motivoParcial ? diaActual.motivoParcial.texto : ""));
+    setBorradorTurno(diaActual.motivoParcial ? diaActual.motivoParcial.turno : "todo");
     setMotivoAbierto(true);
   }
   function onTocarBotonMotivo() {
-    if (noTrabajado) { abrirMotivo(); return; }
+    if (noTrabajado || sinClaseParcial) { abrirMotivo(); return; }
     const hayMarcas = Object.values(diaActual.marcas || {}).some((v) => v);
     if (hayMarcas) { setConfirmarSobrescribir(true); return; }
     abrirMotivo();
   }
   function confirmarMotivo() {
-    onSetMotivo(fecha, borradorMotivo.trim());
+    onSetMotivo(fecha, borradorMotivo.trim(), borradorTurno);
     setMotivoAbierto(false);
   }
   function quitarMotivo() {
-    onSetMotivo(fecha, null);
+    onSetMotivo(fecha, null, null);
     setMotivoAbierto(false);
   }
   // Editar el motivo de un día desde el cartel del calendario mensual:
@@ -4243,7 +4272,8 @@ function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlte
   function editarDesdeCalendario(f) {
     const dia = diasCurso[f] || { motivo: null, marcas: {} };
     setFecha(f);
-    setBorradorMotivo(dia.motivo || "");
+    setBorradorMotivo(dia.motivo || (dia.motivoParcial ? dia.motivoParcial.texto : ""));
+    setBorradorTurno(dia.motivoParcial ? dia.motivoParcial.turno : "todo");
     setMotivoAbierto(true);
     setCalendarioAbierto(false);
   }
@@ -4296,18 +4326,18 @@ function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlte
           <button
             ref={refMotivo}
             onClick={onTocarBotonMotivo}
-            title={noTrabajado ? `Día no trabajado: ${diaActual.motivo} (tocar para editar)` : "Marcar día no trabajado"}
+            title={noTrabajado ? `Sin clase: ${diaActual.motivo} (tocar para editar)` : sinClaseParcial ? `Sin clase (${ETIQUETA_TURNO[sinClaseParcial.turno]}): ${sinClaseParcial.texto} (tocar para editar)` : "Marcar sin clase"}
             style={{
               flex: 1, minWidth: 0, padding: "9px 4px", borderRadius: 999, cursor: "pointer",
-              border: `1.5px solid ${COLORS.ochre}`, background: noTrabajado ? COLORS.ochre : COLORS.ochreSoft,
-              color: noTrabajado ? COLORS.white : COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, fontWeight: 700,
+              border: `1.5px solid ${COLORS.ochre}`, background: (noTrabajado || sinClaseParcial) ? COLORS.ochre : COLORS.ochreSoft,
+              color: (noTrabajado || sinClaseParcial) ? COLORS.white : COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, fontWeight: 700,
               display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-              boxShadow: noTrabajado ? "0 2px 8px rgba(201,138,61,0.35)" : "none", transition: "box-shadow 0.15s, background 0.15s",
+              boxShadow: (noTrabajado || sinClaseParcial) ? "0 2px 8px rgba(201,138,61,0.35)" : "none", transition: "box-shadow 0.15s, background 0.15s",
             }}
           >
             <Hand size={12} strokeWidth={2.2} style={{ flexShrink: 0 }} />
             <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {noTrabajado ? "No trabajado" : "No trabajado"}
+              {sinClaseParcial ? `Sin clase (${ETIQUETA_TURNO[sinClaseParcial.turno]})` : "Sin clase"}
             </span>
           </button>
 
@@ -4356,7 +4386,7 @@ function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlte
         {noTrabajado ? (
           <div style={{ background: COLORS.paperDim, borderRadius: 14, textAlign: "center", padding: "26px 16px" }}>
             <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, color: COLORS.pineDark, fontWeight: 700 }}>
-              Día marcado como no trabajado
+              Día marcado como sin clase
             </div>
             <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, color: COLORS.inkSoft, marginTop: 6, wordBreak: "break-word" }}>
               {diaActual.motivo}
@@ -4370,18 +4400,25 @@ function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlte
             Este curso todavía no tiene alumnos cargados.
           </div>
         ) : (
-          <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, overflow: "hidden", background: COLORS.white, boxShadow: "0 1px 3px rgba(21,53,49,0.06)" }}>
-            {alumnos.map((al, i) => (
-              <div key={al.id} ref={i === 0 ? refCelda : null}>
-                <FilaAsistencia
-                  alumno={al}
-                  numero={i + 1}
-                  estado={(diaActual.marcas || {})[al.id] || ""}
-                  onTocar={() => intentarAlternar(al.id)}
-                />
+          <>
+            {sinClaseParcial && (
+              <div style={{ background: COLORS.ochreSoft, border: `1px solid ${COLORS.ochre}`, borderRadius: 12, padding: "10px 14px", marginBottom: 10, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: COLORS.pineDark }}>
+                <b>Sin clase — {ETIQUETA_TURNO[sinClaseParcial.turno]}:</b> {sinClaseParcial.texto}
               </div>
-            ))}
-          </div>
+            )}
+            <div style={{ border: `1px solid ${COLORS.line}`, borderRadius: 14, overflow: "hidden", background: COLORS.white, boxShadow: "0 1px 3px rgba(21,53,49,0.06)" }}>
+              {alumnos.map((al, i) => (
+                <div key={al.id} ref={i === 0 ? refCelda : null}>
+                  <FilaAsistencia
+                    alumno={al}
+                    numero={i + 1}
+                    estado={(diaActual.marcas || {})[al.id] || ""}
+                    onTocar={() => intentarAlternar(al.id)}
+                  />
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
@@ -4399,7 +4436,7 @@ function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlte
       {confirmarSobrescribir && (
         <ModalConfirmacion
           titulo="Ya hay asistencia cargada"
-          texto="Este día ya tiene marcas cargadas. Si lo marcás como no trabajado, se van a ignorar para el cálculo (pero no se borran: si después quitás la marca, reaparecen). ¿Continuar?"
+          texto="Este día ya tiene marcas cargadas. Si lo marcás como sin clase, se van a ignorar para el cálculo (pero no se borran: si después quitás la marca, reaparecen). ¿Continuar?"
           botones={[
             <span key="si" onClick={() => { setConfirmarSobrescribir(false); abrirMotivo(); }} style={{ ...chipBase, color: COLORS.white, background: COLORS.rose, padding: "8px 14px" }}>Sí, continuar</span>,
             <span key="no" onClick={() => setConfirmarSobrescribir(false)} style={{ ...chipBase, color: COLORS.inkSoft, background: COLORS.paperDim, padding: "8px 14px" }}>Cancelar</span>,
@@ -4408,7 +4445,29 @@ function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlte
       )}
 
       {motivoAbierto && (
-        <ModalConfirmacion titulo="Día no trabajado" texto="Detallá el motivo (licencia, artículo utilizado, etc.).">
+        <ModalConfirmacion titulo="Sin clase" texto="Licencia, paro, etc. Elegí si fue todo el día o solo un turno, y detallá el motivo.">
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+            {[
+              ["todo", "Todo el día"],
+              ["manana", "Mañana"],
+              ["tarde", "Tarde"],
+              ...(hayHorarioNocturno ? [["noche", "Noche"]] : []),
+            ].map(([valor, etiqueta]) => (
+              <span
+                key={valor}
+                onClick={() => setBorradorTurno(valor)}
+                style={{
+                  padding: "7px 13px", borderRadius: 999, cursor: "pointer",
+                  border: `1.5px solid ${borradorTurno === valor ? COLORS.pine : COLORS.line}`,
+                  background: borradorTurno === valor ? COLORS.pine : COLORS.white,
+                  color: borradorTurno === valor ? COLORS.white : COLORS.inkSoft,
+                  fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 600,
+                }}
+              >
+                {etiqueta}
+              </span>
+            ))}
+          </div>
           <textarea
             value={borradorMotivo}
             onChange={(e) => setBorradorMotivo(e.target.value)}
@@ -4419,7 +4478,7 @@ function PantallaAsistencia({ curso, alumnos, diasCurso, diasClaseConfig, onAlte
           />
           <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
             <span onClick={confirmarMotivo} style={{ ...chipBase, color: COLORS.white, background: COLORS.pine, padding: "8px 14px" }}>Guardar</span>
-            {noTrabajado && <span onClick={quitarMotivo} style={{ ...chipBase, color: COLORS.white, background: COLORS.rose, padding: "8px 14px" }}>Quitar marca</span>}
+            {(noTrabajado || sinClaseParcial) && <span onClick={quitarMotivo} style={{ ...chipBase, color: COLORS.white, background: COLORS.rose, padding: "8px 14px" }}>Quitar marca</span>}
             <span onClick={() => setMotivoAbierto(false)} style={{ ...chipBase, color: COLORS.inkSoft, background: COLORS.paperDim, padding: "8px 14px" }}>Cancelar</span>
           </div>
         </ModalConfirmacion>
@@ -5982,7 +6041,7 @@ function PantallaHorarioDocente({ colegios, cursosPorColegio, diasClasePorCurso,
   );
 }
 
-function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno, onEditarAlumno, onAbrirFicha, onVolver, criterios, ordenPorCurso, onReordenarCriterios, onAgregarCriterio, onUsarCriterio, onUsarCriterioEnTodos, onQuitarCriterio, onEditarCriterio, onEliminarCriterioDefinitivo, periodo, onCambiarPeriodo, instanciasPorCriterio, onGuardarMasivo, onGuardarComentarioMasivo, onMarcarAlertaDescartada, onAgregarInstancia, onEditarInstancia, onBorrarInstancia, notaAprobacion, onCambiarNotaAprobacion, onCambiarNotaOficial, onCambiarNotaRecuperatorio, nombresColumnasPorColegio, onRenombrarColumnaNota, diasCurso, diasClaseConfig, onAlternarCeldaAsistencia, onAlternarTodosPresentes, onSetMotivoNoTrabajado, onSetDiasClase, tourVisto, onMarcarTourVisto, tourVistoPorPantalla, onMarcarTourVistoPantalla, promedioAuto, onTogglePromedioAuto }) {
+function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno, onEditarAlumno, onAbrirFicha, onVolver, criterios, ordenPorCurso, onReordenarCriterios, onAgregarCriterio, onUsarCriterio, onUsarCriterioEnTodos, onQuitarCriterio, onEditarCriterio, onEliminarCriterioDefinitivo, periodo, onCambiarPeriodo, instanciasPorCriterio, onGuardarMasivo, onGuardarComentarioMasivo, onMarcarAlertaDescartada, onAgregarInstancia, onEditarInstancia, onBorrarInstancia, notaAprobacion, onCambiarNotaAprobacion, onCambiarNotaOficial, onCambiarNotaRecuperatorio, nombresColumnasPorColegio, onRenombrarColumnaNota, diasCurso, diasClaseConfig, onAlternarCeldaAsistencia, onAlternarTodosPresentes, onSetMotivoNoTrabajado, hayHorarioNocturno, onSetDiasClase, tourVisto, onMarcarTourVisto, tourVistoPorPantalla, onMarcarTourVistoPantalla, promedioAuto, onTogglePromedioAuto }) {
   const [busqueda, setBusqueda] = useState("");
   const [masivaAbierta, setMasivaAbierta] = useState(false);
   const [planillaAbierta, setPlanillaAbierta] = useState(false);
@@ -6204,6 +6263,7 @@ function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno
           onAlternarCelda={onAlternarCeldaAsistencia}
           onAlternarTodosPresentes={onAlternarTodosPresentes}
           onSetMotivo={onSetMotivoNoTrabajado}
+          hayHorarioNocturno={hayHorarioNocturno}
           onSetDiasClase={onSetDiasClase}
           onCerrar={() => setAsistenciaAbierta(false)}
           tourVisto={!!(tourVistoPorPantalla || {}).asistencia}
@@ -6962,16 +7022,27 @@ function CISDNavegacion() {
     });
   }
 
-  // Marca, edita o quita el motivo de "día no trabajado" para una fecha.
-  // motivo === null quita la marca (el día vuelve a estar disponible).
-  function setMotivoNoTrabajado(curId, fecha, motivo) {
+  // Marca, edita o quita "Sin clase" para una fecha. Si turno es null (o
+  // "todo"), es el día completo (comportamiento de siempre: se guarda en
+  // "motivo", y ese día queda afuera del cálculo de asistencia). Si turno
+  // es "manana"/"tarde"/"noche", es parcial: se guarda aparte en
+  // "motivoParcial" y el día NO se excluye del cálculo — el turno que sí
+  // se trabajó sigue contando normal (eso ya lo resuelve solo el cálculo
+  // existente, que ya excluye únicamente por "motivo").
+  function setMotivoNoTrabajado(curId, fecha, motivo, turno) {
     setAsistenciaPorCurso((prev) => {
       const diasCurso = prev[curId] || {};
       const dia = diasCurso[fecha] || { motivo: null, marcas: {} };
-      return {
-        ...prev,
-        [curId]: { ...diasCurso, [fecha]: { ...dia, motivo: motivo && motivo.trim() ? motivo.trim() : null } },
-      };
+      const texto = motivo && motivo.trim() ? motivo.trim() : null;
+      let actualizado;
+      if (!texto) {
+        actualizado = { ...dia, motivo: null, motivoParcial: null };
+      } else if (turno && turno !== "todo") {
+        actualizado = { ...dia, motivo: null, motivoParcial: { turno, texto } };
+      } else {
+        actualizado = { ...dia, motivo: texto, motivoParcial: null };
+      }
+      return { ...prev, [curId]: { ...diasCurso, [fecha]: actualizado } };
     });
   }
 
@@ -7496,7 +7567,8 @@ function CISDNavegacion() {
             diasClaseConfig={diasClasePorCurso[cursoActual.id] || []}
             onAlternarCeldaAsistencia={(fecha, alumnoId) => alternarCeldaAsistencia(cursoActual.id, fecha, alumnoId)}
             onAlternarTodosPresentes={(fecha) => alternarTodosPresentes(cursoActual.id, fecha, (alumnosPorCurso[cursoActual.id] || []).map((a) => a.id))}
-            onSetMotivoNoTrabajado={(fecha, motivo) => setMotivoNoTrabajado(cursoActual.id, fecha, motivo)}
+            onSetMotivoNoTrabajado={(fecha, motivo, turno) => setMotivoNoTrabajado(cursoActual.id, fecha, motivo, turno)}
+            hayHorarioNocturno={tieneHorarioNocturno(diasClasePorCurso)}
             onSetDiasClase={(dias) => setDiasClaseCurso(cursoActual.id, dias)}
             tourVisto={!!tourVistoPorPantalla.aula}
             onMarcarTourVisto={() => marcarTourVisto("aula")}
