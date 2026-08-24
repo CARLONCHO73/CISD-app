@@ -912,7 +912,7 @@ function PopupNotaAprobacion({ valorInicial, onConfirmar, onCancelar }) {
     if (Number.isFinite(n) && n > 0) onConfirmar(n);
   }
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(34,32,27,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 95, padding: 20 }}>
+    <div style={{ position: "fixed", inset: 0, background: "rgba(34,32,27,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 140, padding: 20 }}>
       <div style={{ background: COLORS.white, borderRadius: 14, padding: 20, width: "100%", maxWidth: 340, boxShadow: "0 12px 30px rgba(0,0,0,0.3)" }}>
         <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18, fontWeight: 600, color: COLORS.pineDark, marginBottom: 8 }}>
           Nota mínima de aprobación
