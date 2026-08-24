@@ -191,6 +191,17 @@
   .gtable .fin{ background: rgba(201,123,59,0.16); font-weight:700; color:var(--amber-deep); }
   .gshot-caption{ text-align:center; margin-top:12px; font-size:13.5px; color:var(--muted); }
 
+  /* ---- Tutoriales ---- */
+  .tutoriales-grid{ display:flex; justify-content:center; flex-wrap:wrap; gap:32px; }
+  .tutorial-card{ width:240px; }
+  .tutorial-phone{
+    position:relative; background: var(--pine-900); border-radius:26px; padding:9px;
+    box-shadow: 0 24px 46px -16px rgba(18,41,31,0.4); aspect-ratio: 9/16; overflow:hidden;
+  }
+  .tutorial-phone-notch{ position:absolute; top:9px; left:50%; transform:translateX(-50%); width:64px; height:14px; background:var(--pine-900); border-radius:0 0 10px 10px; z-index:2; }
+  .tutorial-phone iframe{ width:100%; height:100%; border:none; border-radius:18px; background:#000; }
+  .tutorial-caption{ text-align:center; margin-top:14px; font-size:14.5px; font-weight:600; color:var(--pine-800); }
+
   /* ---- Funciones ---- */
   .features{ background: var(--cream-deep); }
   .feat-grid{ display:grid; grid-template-columns: 1fr; gap: 16px; }
@@ -410,6 +421,37 @@
             </div>
           </div>
           <p class="gshot-caption">Se arma sola con lo cargado en cada alumno.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="spiral" aria-hidden="true">
+    <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+  </div>
+
+  <!-- TUTORIALES -->
+  <section id="tutoriales">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Paso a paso</span>
+        <h2>Tutoriales en video</h2>
+        <p>Videos cortos, de un minuto, para aprender a usar CISD sin vueltas. Vamos a ir sumando más con el tiempo.</p>
+      </div>
+
+      <div class="tutoriales-grid">
+        <div class="tutorial-card">
+          <div class="tutorial-phone">
+            <div class="tutorial-phone-notch"></div>
+            <iframe
+              src="https://www.youtube.com/embed/oUPQ2akCrpI"
+              title="Cómo crear un colegio, cursos y cargar alumnos en CISD"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen
+              loading="lazy"
+            ></iframe>
+          </div>
+          <div class="tutorial-caption">Cómo crear un colegio, cursos y cargar alumnos</div>
         </div>
       </div>
     </div>
