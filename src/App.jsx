@@ -1548,8 +1548,17 @@ function FilaCriterio({ criterio, activo, onUsar, onUsarEnTodos, onQuitar, onEdi
     );
   }
 
+  const menuAbierto = modo === "menu";
+
   return (
-    <div style={{ ...rowStyle, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, opacity: activo ? 1 : 0.9 }}>
+    <div
+      style={{
+        ...rowStyle, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, opacity: activo ? 1 : 0.9,
+        position: "relative", zIndex: menuAbierto ? 160 : "auto",
+        border: menuAbierto ? `2.5px solid ${COLORS.pine}` : rowStyle.border,
+        boxShadow: menuAbierto ? "0 4px 14px rgba(31,76,67,0.22)" : "none",
+      }}
+    >
       <div style={{ minWidth: 0, flex: 1 }}>
         <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, fontWeight: 500, color: COLORS.ink }}>{criterio.nombre}</div>
         <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 10.5, color: COLORS.inkSoft }}>{etiquetaTipoCriterio(criterio)}</div>
@@ -1557,16 +1566,18 @@ function FilaCriterio({ criterio, activo, onUsar, onUsarEnTodos, onQuitar, onEdi
 
       <div style={{ position: "relative", flexShrink: 0 }}>
         <span
-          onClick={() => setModo(modo === "menu" ? "normal" : "menu")}
+          onClick={() => setModo(menuAbierto ? "normal" : "menu")}
           style={{ padding: "4px 8px", fontSize: 22, fontWeight: 700, color: COLORS.pine, cursor: "pointer", lineHeight: 1 }}
           aria-label="Más opciones"
         >
           ⋮
         </span>
-        {modo === "menu" && (
+        {menuAbierto && (
           <>
             <div onClick={() => setModo("normal")} style={{ position: "fixed", inset: 0, zIndex: 150 }} />
-            <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, zIndex: 151, background: COLORS.white, borderRadius: 12, boxShadow: "0 10px 26px rgba(18,41,31,0.24)", padding: 6, minWidth: 200 }}>
+            {/* Flechita que conecta el menú con los 3 puntitos tocados */}
+            <div style={{ position: "absolute", top: "calc(100% + 1px)", right: 12, width: 14, height: 14, background: COLORS.white, transform: "rotate(45deg)", zIndex: 151, boxShadow: "-3px -3px 6px -4px rgba(18,41,31,0.15)" }} />
+            <div style={{ position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 152, background: COLORS.white, borderRadius: 12, boxShadow: "0 10px 26px rgba(18,41,31,0.24)", padding: 6, minWidth: 200 }}>
               {!activo && (
                 <div onClick={() => { onUsar(); setModo("normal"); }} style={menuItemStyle}>Usar</div>
               )}
