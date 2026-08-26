@@ -1520,8 +1520,12 @@ function FilaCriterio({ criterio, activo, onUsar, onUsarEnTodos, onQuitar, onEdi
   const [modo, setModo] = useState("normal");
 
   const rowStyle = {
-    background: activo ? COLORS.white : COLORS.paperDim, border: `1px solid ${COLORS.line}`,
+    background: activo ? COLORS.white : COLORS.paperDim, border: `2.5px solid rgba(31,76,67,0.45)`,
     borderRadius: 12, padding: "9px 11px", marginBottom: 6,
+  };
+  const menuItemStyle = {
+    padding: "10px 12px", borderRadius: 8, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13,
+    fontWeight: 600, color: COLORS.ink, cursor: "pointer", whiteSpace: "nowrap",
   };
 
   if (modo === "editando") {
@@ -1550,28 +1554,34 @@ function FilaCriterio({ criterio, activo, onUsar, onUsarEnTodos, onQuitar, onEdi
         <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, fontWeight: 500, color: COLORS.ink }}>{criterio.nombre}</div>
         <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 10.5, color: COLORS.inkSoft }}>{etiquetaTipoCriterio(criterio)}</div>
       </div>
-      {modo === "menu" ? (
-        <div style={{ display: "flex", gap: 5, flexShrink: 0, flexWrap: "wrap", justifyContent: "flex-end" }}>
-          <span onClick={() => setModo("editando")} style={{ ...chipBase, color: COLORS.white, background: COLORS.pine }}>Editar</span>
-          {activo ? (
-            <span onClick={() => { onQuitar(); setModo("normal"); }} style={{ ...chipBase, color: COLORS.pineDark, background: COLORS.ochreSoft }}>Quitar de este curso</span>
-          ) : (
-            <>
-              <span onClick={() => { onUsar(); setModo("normal"); }} style={{ ...chipBase, color: COLORS.white, background: COLORS.pine }}>Usar</span>
-              <span onClick={() => { onUsarEnTodos(); setModo("normal"); }} style={{ ...chipBase, color: COLORS.pineDark, background: COLORS.ochreSoft }}>Usar en todos mis cursos</span>
-            </>
-          )}
-          <span onClick={() => setModo("confirmarEliminar")} style={{ ...chipBase, color: COLORS.white, background: COLORS.rose }}>Eliminar definitivamente</span>
-          <span onClick={() => setModo("normal")} style={{ ...chipBase, color: COLORS.inkSoft, background: COLORS.paperDim, padding: "5px 8px" }}>×</span>
-        </div>
-      ) : activo ? (
-        <span onClick={() => setModo("menu")} style={{ padding: "4px 8px", fontSize: 16, color: COLORS.inkSoft, cursor: "pointer", lineHeight: 1 }} aria-label="Más opciones">⋮</span>
-      ) : (
-        <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
-          <span onClick={onUsar} style={{ ...chipBase, color: COLORS.white, background: COLORS.pine }}>Usar</span>
-          <span onClick={() => setModo("menu")} style={{ padding: "4px 6px", fontSize: 16, color: COLORS.inkSoft, cursor: "pointer", lineHeight: 1 }} aria-label="Más opciones">⋮</span>
-        </div>
-      )}
+
+      <div style={{ position: "relative", flexShrink: 0 }}>
+        <span
+          onClick={() => setModo(modo === "menu" ? "normal" : "menu")}
+          style={{ padding: "4px 8px", fontSize: 22, fontWeight: 700, color: COLORS.pine, cursor: "pointer", lineHeight: 1 }}
+          aria-label="Más opciones"
+        >
+          ⋮
+        </span>
+        {modo === "menu" && (
+          <>
+            <div onClick={() => setModo("normal")} style={{ position: "fixed", inset: 0, zIndex: 150 }} />
+            <div style={{ position: "absolute", top: "calc(100% + 4px)", right: 0, zIndex: 151, background: COLORS.white, borderRadius: 12, boxShadow: "0 10px 26px rgba(18,41,31,0.24)", padding: 6, minWidth: 200 }}>
+              {!activo && (
+                <div onClick={() => { onUsar(); setModo("normal"); }} style={menuItemStyle}>Usar</div>
+              )}
+              <div onClick={() => setModo("editando")} style={menuItemStyle}>Editar</div>
+              {activo ? (
+                <div onClick={() => { onQuitar(); setModo("normal"); }} style={menuItemStyle}>Quitar de este curso</div>
+              ) : (
+                <div onClick={() => { onUsarEnTodos(); setModo("normal"); }} style={menuItemStyle}>Usar en todos mis cursos</div>
+              )}
+              <div style={{ height: 1, background: COLORS.line, margin: "4px 2px" }} />
+              <div onClick={() => setModo("confirmarEliminar")} style={{ ...menuItemStyle, color: COLORS.rose }}>Eliminar definitivamente</div>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -1800,12 +1810,14 @@ function ListaOrdenable({ ids, renderItem, onReordenar }) {
 
 function BannerReplicar({ nombre, onSi, onNo }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, background: "#FBF3E4", border: `1px solid ${COLORS.ochreSoft}`, borderRadius: 12, padding: "9px 11px", marginBottom: 6 }}>
-      <div style={{ flex: 1, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, color: COLORS.ink }}>
-        "{nombre}" se activó en este curso. ¿Lo usás también en el resto de tus cursos? (Vale para los demás criterios que sumes ahora, no te lo volvemos a preguntar en esta visita.)
+    <div style={{ background: "#FBF3E4", border: `1px solid ${COLORS.ochreSoft}`, borderRadius: 12, padding: "11px 12px", marginBottom: 6 }}>
+      <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, color: COLORS.ink, marginBottom: 8 }}>
+        <b>"{nombre}"</b> se activó. ¿Lo usás en tus demás cursos también?
       </div>
-      <span onClick={onSi} style={{ ...chipBase, color: COLORS.white, background: COLORS.pine }}>Sí, a todos</span>
-      <span onClick={onNo} style={{ ...chipBase, color: COLORS.inkSoft, background: COLORS.paperDim }}>Solo acá</span>
+      <div style={{ display: "flex", gap: 8 }}>
+        <span onClick={onSi} style={{ ...chipBase, color: COLORS.white, background: COLORS.pine }}>Sí, a todos</span>
+        <span onClick={onNo} style={{ ...chipBase, color: COLORS.inkSoft, background: COLORS.paperDim }}>Solo acá</span>
+      </div>
     </div>
   );
 }
@@ -1875,12 +1887,6 @@ function SeccionCriterios({ curso, criterios, ordenPorCurso, onReordenar, onAgre
 
       {abierto && (
         <div style={{ flexBasis: "100%", border: `1px solid ${COLORS.line}`, borderRadius: 14, background: COLORS.white, padding: "10px 12px", boxShadow: "0 1px 3px rgba(21,53,49,0.06)" }}>
-          {activos.length === 0 && (
-            <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: COLORS.inkSoft, fontStyle: "italic", marginBottom: 8 }}>
-              Todavía no activaste ningún criterio acá. Elegí de la lista de abajo o creá uno nuevo.
-            </div>
-          )}
-
           {pendienteReplicar && (
             <BannerReplicar
               nombre={pendienteReplicar.nombre}
@@ -6126,85 +6132,109 @@ function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno
       {herramientasAbierto && (
         <>
           <div onClick={() => setHerramientasAbierto(false)} style={{ position: "fixed", inset: 0, background: "rgba(21,53,49,0.55)", zIndex: 120 }} />
-          <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(320px, 86vw)", background: COLORS.paper, zIndex: 121, boxShadow: "-10px 0 30px rgba(0,0,0,0.3)", padding: "20px 16px 24px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 2 }}>
+          <div style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(440px, 100vw)", background: COLORS.paper, zIndex: 121, boxShadow: "-10px 0 30px rgba(0,0,0,0.3)", display: "flex", flexDirection: "column" }}>
+            <div style={{ position: "sticky", top: 0, zIndex: 2, background: COLORS.paper, borderBottom: `1px solid ${COLORS.line}`, padding: "16px 18px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexShrink: 0 }}>
               <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 18, color: COLORS.pineDark }}>Herramientas y filtros</div>
-              <button onClick={() => setHerramientasAbierto(false)} style={{ width: 30, height: 30, borderRadius: "50%", border: "none", background: COLORS.paperDim, color: COLORS.pineDark, fontWeight: 700, fontSize: 14, cursor: "pointer" }}>✕</button>
-            </div>
-
-            <SelectorPeriodo periodo={periodo} onChange={onCambiarPeriodo} />
-
-            <button
-              ref={refCargaMasiva}
-              onClick={() => { if (criteriosInstancias.length > 0) { setMasivaAbierta(true); setHerramientasAbierto(false); } }}
-              style={{ display: "flex", alignItems: "center", gap: 6, padding: "10px 12px", borderRadius: 10, border: `1.5px solid ${COLORS.pine}`, background: "transparent", color: COLORS.pine, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: criteriosInstancias.length > 0 ? "pointer" : "default", opacity: criteriosInstancias.length > 0 ? 1 : 0.45 }}
-            >
-              <ClipboardList size={14} strokeWidth={2.4} /> Carga rápida de notas
-            </button>
-
-            <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, fontWeight: 700, color: COLORS.inkSoft, textTransform: "uppercase", letterSpacing: 0.6, marginTop: 6 }}>Vistas</div>
-
-            <button
-              onClick={() => { setPlanillaAbierta(true); setHerramientasAbierto(false); }}
-              style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 12px", borderRadius: 11, border: `1px solid ${COLORS.line}`, background: COLORS.white, color: COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, fontWeight: 600, cursor: "pointer", textAlign: "left" }}
-            >
-              <ClipboardList size={16} strokeWidth={2.2} /> Planilla
-            </button>
-
-            <div ref={refPlanillaGrupo} style={{ position: "relative" }}>
               <button
-                onClick={() => setMenuRecuperatoriosAbierto((v) => !v)}
-                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "11px 12px", borderRadius: 11, border: `1px solid ${COLORS.ochre}`, background: COLORS.white, color: COLORS.ochre, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, fontWeight: 600, cursor: "pointer" }}
+                onClick={() => setHerramientasAbierto(false)}
+                aria-label="Cerrar"
+                style={{ width: 34, height: 34, borderRadius: "50%", border: "none", background: COLORS.paperDim, color: COLORS.pineDark, fontSize: 16, fontWeight: 700, cursor: "pointer", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}
               >
-                Recuperatorios <ChevronLeft size={13} strokeWidth={2.6} style={{ transform: "rotate(-90deg)" }} />
+                ✕
               </button>
-              {menuRecuperatoriosAbierto && (
-                <>
-                  <div onClick={() => setMenuRecuperatoriosAbierto(false)} style={{ position: "fixed", inset: 0, zIndex: 125 }} />
-                  <div style={{ position: "relative", zIndex: 126, background: COLORS.white, borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.28)", padding: 6, marginTop: 6 }}>
-                    <div
-                      onClick={() => { setRecuperatorioAbierto("diciembre"); setMenuRecuperatoriosAbierto(false); setHerramientasAbierto(false); }}
-                      style={{ padding: "9px 10px", borderRadius: 8, color: COLORS.ochre, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
-                    >
-                      Diciembre
-                    </div>
-                    <div
-                      onClick={() => { setRecuperatorioAbierto("febrero"); setMenuRecuperatoriosAbierto(false); setHerramientasAbierto(false); }}
-                      style={{ padding: "9px 10px", borderRadius: 8, color: COLORS.rose, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
-                    >
-                      Febrero
-                    </div>
-                  </div>
-                </>
-              )}
             </div>
 
-            <button
-              ref={refInformes}
-              onClick={() => { setInformesAbierto(true); setHerramientasAbierto(false); }}
-              style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 12px", borderRadius: 11, border: `1px solid ${COLORS.line}`, background: COLORS.white, color: COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13.5, fontWeight: 600, cursor: "pointer", textAlign: "left" }}
-            >
-              <Printer size={16} strokeWidth={2.2} /> Informe
-            </button>
+            <div style={{ flex: 1, overflowY: "auto", padding: "18px 18px 24px", display: "flex", flexDirection: "column", gap: 14 }}>
+              <SelectorPeriodo periodo={periodo} onChange={onCambiarPeriodo} />
 
-            <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, fontWeight: 700, color: COLORS.inkSoft, textTransform: "uppercase", letterSpacing: 0.6, marginTop: 6 }}>Seguimiento</div>
+              <button
+                ref={refCargaMasiva}
+                onClick={() => { if (criteriosInstancias.length > 0) { setMasivaAbierta(true); setHerramientasAbierto(false); } }}
+                style={{
+                  display: "flex", alignItems: "center", gap: 7, padding: "13px 14px", borderRadius: 13, border: "none",
+                  background: criteriosInstancias.length > 0 ? COLORS.pine : COLORS.paperDim, color: criteriosInstancias.length > 0 ? COLORS.white : COLORS.inkSoft,
+                  fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14.5, fontWeight: 700, cursor: criteriosInstancias.length > 0 ? "pointer" : "default",
+                  boxShadow: criteriosInstancias.length > 0 ? "0 6px 16px rgba(31,76,67,0.32)" : "none",
+                }}
+              >
+                <ClipboardList size={17} strokeWidth={2.4} /> Carga rápida de notas
+              </button>
 
-            <div ref={refCriterios}>
-              <SeccionCriterios
-                curso={curso}
-                criterios={criterios}
-                ordenPorCurso={ordenPorCurso}
-                onReordenar={(nuevoOrden, aplicarATodos) => onReordenarCriterios(curso.id, nuevoOrden, aplicarATodos)}
-                onAgregar={onAgregarCriterio}
-                onUsar={(id) => onUsarCriterio(id, curso.id)}
-                onUsarEnTodos={onUsarCriterioEnTodos}
-                onQuitar={(id) => onQuitarCriterio(id, curso.id)}
-                onEditar={onEditarCriterio}
-                onEliminarDefinitivo={onEliminarCriterioDefinitivo}
-              />
+              <div>
+                <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, fontWeight: 700, color: COLORS.inkSoft, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 8 }}>Vistas</div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    onClick={() => { setPlanillaAbierta(true); setHerramientasAbierto(false); }}
+                    style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 6, padding: 14, borderRadius: 13, border: `2px solid ${COLORS.pine}`, background: COLORS.white, color: COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 12px rgba(31,76,67,0.14)" }}
+                  >
+                    <ClipboardList size={20} strokeWidth={2.2} color={COLORS.pine} /> Planilla
+                  </button>
+                  <button
+                    ref={refInformes}
+                    onClick={() => { setInformesAbierto(true); setHerramientasAbierto(false); }}
+                    style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 6, padding: 14, borderRadius: 13, border: `2px solid ${COLORS.pine}`, background: COLORS.white, color: COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 12px rgba(31,76,67,0.14)" }}
+                  >
+                    <Printer size={20} strokeWidth={2.2} color={COLORS.pine} /> Informe
+                  </button>
+                </div>
+
+                <div ref={refPlanillaGrupo} style={{ position: "relative", marginTop: 8 }}>
+                  <button
+                    onClick={() => setMenuRecuperatoriosAbierto((v) => !v)}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", padding: "13px 14px", borderRadius: 13, border: "none", background: COLORS.ochre, color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14.5, fontWeight: 700, cursor: "pointer", boxShadow: "0 6px 16px rgba(201,138,61,0.35)" }}
+                  >
+                    Recuperatorios <ChevronLeft size={13} strokeWidth={2.6} style={{ transform: "rotate(-90deg)" }} />
+                  </button>
+                  {menuRecuperatoriosAbierto && (
+                    <>
+                      <div onClick={() => setMenuRecuperatoriosAbierto(false)} style={{ position: "fixed", inset: 0, zIndex: 125 }} />
+                      <div style={{ position: "relative", zIndex: 126, background: COLORS.white, borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.28)", padding: 6, marginTop: 6 }}>
+                        <div
+                          onClick={() => { setRecuperatorioAbierto("diciembre"); setMenuRecuperatoriosAbierto(false); setHerramientasAbierto(false); }}
+                          style={{ padding: "9px 10px", borderRadius: 8, color: COLORS.ochre, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                        >
+                          Diciembre
+                        </div>
+                        <div
+                          onClick={() => { setRecuperatorioAbierto("febrero"); setMenuRecuperatoriosAbierto(false); setHerramientasAbierto(false); }}
+                          style={{ padding: "9px 10px", borderRadius: 8, color: COLORS.rose, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                        >
+                          Febrero
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div>
+                <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, fontWeight: 700, color: COLORS.inkSoft, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 8 }}>Seguimiento</div>
+                <div ref={refCriterios}>
+                  <SeccionCriterios
+                    curso={curso}
+                    criterios={criterios}
+                    ordenPorCurso={ordenPorCurso}
+                    onReordenar={(nuevoOrden, aplicarATodos) => onReordenarCriterios(curso.id, nuevoOrden, aplicarATodos)}
+                    onAgregar={onAgregarCriterio}
+                    onUsar={(id) => onUsarCriterio(id, curso.id)}
+                    onUsarEnTodos={onUsarCriterioEnTodos}
+                    onQuitar={(id) => onQuitarCriterio(id, curso.id)}
+                    onEditar={onEditarCriterio}
+                    onEliminarDefinitivo={onEliminarCriterioDefinitivo}
+                  />
+                </div>
+                <div style={{ marginTop: 10 }}>
+                  <ChipNotaAprobacion notaAprobacion={notaAprobacion} onAbrir={() => setEditarNotaAprobacionAbierto(true)} />
+                </div>
+              </div>
+
+              <button
+                onClick={() => setHerramientasAbierto(false)}
+                style={{ marginTop: 6, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "14px", borderRadius: 13, border: "none", background: COLORS.pine, color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14.5, fontWeight: 700, cursor: "pointer", boxShadow: "0 6px 16px rgba(31,76,67,0.32)" }}
+              >
+                <ChevronLeft size={16} strokeWidth={2.6} /> Volver al curso
+              </button>
             </div>
-
-            <ChipNotaAprobacion notaAprobacion={notaAprobacion} onAbrir={() => setEditarNotaAprobacionAbierto(true)} />
           </div>
         </>
       )}
