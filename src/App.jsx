@@ -1793,7 +1793,7 @@ function ListaOrdenable({ ids, renderItem, onReordenar }) {
 
   return (
     <div>
-      {orden.map((id) => (
+      {orden.map((id, idx) => (
         <div
           key={id}
           ref={(el) => { refs.current[id] = el; }}
@@ -1806,7 +1806,11 @@ function ListaOrdenable({ ids, renderItem, onReordenar }) {
             touchAction: arrastrandoId === id ? "none" : "pan-y",
             transform: arrastrandoId === id ? `translateY(${offsetY}px) scale(1.015)` : "none",
             transition: arrastrandoId === id ? "none" : "transform 0.15s ease",
-            position: "relative", zIndex: arrastrandoId === id ? 25 : 1,
+            // Las filas de más arriba en la lista quedan con más prioridad
+            // de apilado que las de abajo — así, cuando una fila despliega
+            // su menú (que abre hacia abajo), siempre queda por encima de
+            // las filas siguientes, sin importar cuál sea.
+            position: "relative", zIndex: arrastrandoId === id ? orden.length + 50 : orden.length - idx,
             filter: arrastrandoId === id ? "drop-shadow(0 10px 18px rgba(0,0,0,0.2))" : "none",
             cursor: "grab", userSelect: "none", WebkitUserSelect: "none", WebkitTouchCallout: "none",
           }}
