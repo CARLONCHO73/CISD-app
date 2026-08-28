@@ -6180,16 +6180,16 @@ function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno
                 <div style={{ display: "flex", gap: 8 }}>
                   <button
                     onClick={() => { setPlanillaAbierta(true); setHerramientasAbierto(false); }}
-                    style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 6, padding: 14, borderRadius: 13, border: `2px solid ${COLORS.pine}`, background: COLORS.white, color: COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 12px rgba(31,76,67,0.14)" }}
+                    style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4, padding: 10, borderRadius: 12, border: `2px solid ${COLORS.pine}`, background: COLORS.white, color: COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 700, cursor: "pointer", boxShadow: "0 3px 9px rgba(31,76,67,0.14)" }}
                   >
-                    <ClipboardList size={20} strokeWidth={2.2} color={COLORS.pine} /> Planilla
+                    <ClipboardList size={17} strokeWidth={2.2} color={COLORS.pine} /> Planilla
                   </button>
                   <button
                     ref={refInformes}
                     onClick={() => { setInformesAbierto(true); setHerramientasAbierto(false); }}
-                    style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 6, padding: 14, borderRadius: 13, border: `2px solid ${COLORS.pine}`, background: COLORS.white, color: COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, fontWeight: 700, cursor: "pointer", boxShadow: "0 4px 12px rgba(31,76,67,0.14)" }}
+                    style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4, padding: 10, borderRadius: 12, border: `2px solid ${COLORS.pine}`, background: COLORS.white, color: COLORS.pineDark, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 700, cursor: "pointer", boxShadow: "0 3px 9px rgba(31,76,67,0.14)" }}
                   >
-                    <Printer size={20} strokeWidth={2.2} color={COLORS.pine} /> Informe
+                    <Printer size={17} strokeWidth={2.2} color={COLORS.pine} /> Informe
                   </button>
                 </div>
 
@@ -6203,19 +6203,19 @@ function PantallaAula({ colegio, curso, alumnos, onAgregarAlumno, onBorrarAlumno
                   {menuRecuperatoriosAbierto && (
                     <>
                       <div onClick={() => setMenuRecuperatoriosAbierto(false)} style={{ position: "fixed", inset: 0, zIndex: 125 }} />
-                      <div style={{ position: "relative", zIndex: 126, background: COLORS.white, borderRadius: 12, boxShadow: "0 8px 24px rgba(0,0,0,0.28)", padding: 6, marginTop: 6 }}>
-                        <div
+                      <div style={{ position: "relative", zIndex: 126, display: "flex", gap: 8, marginTop: 8 }}>
+                        <button
                           onClick={() => { setRecuperatorioAbierto("diciembre"); setMenuRecuperatoriosAbierto(false); setHerramientasAbierto(false); }}
-                          style={{ padding: "9px 10px", borderRadius: 8, color: COLORS.ochre, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                          style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4, padding: 10, borderRadius: 12, border: `2px solid ${COLORS.ochre}`, background: COLORS.white, color: COLORS.ochre, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 700, cursor: "pointer", boxShadow: "0 3px 9px rgba(201,138,61,0.14)" }}
                         >
-                          Diciembre
-                        </div>
-                        <div
+                          <CalendarDays size={17} strokeWidth={2.2} color={COLORS.ochre} /> Diciembre
+                        </button>
+                        <button
                           onClick={() => { setRecuperatorioAbierto("febrero"); setMenuRecuperatoriosAbierto(false); setHerramientasAbierto(false); }}
-                          style={{ padding: "9px 10px", borderRadius: 8, color: COLORS.rose, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+                          style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 4, padding: 10, borderRadius: 12, border: `2px solid ${COLORS.rose}`, background: COLORS.white, color: COLORS.rose, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 700, cursor: "pointer", boxShadow: "0 3px 9px rgba(184,92,80,0.14)" }}
                         >
-                          Febrero
-                        </div>
+                          <CalendarDays size={17} strokeWidth={2.2} color={COLORS.rose} /> Febrero
+                        </button>
                       </div>
                     </>
                   )}
