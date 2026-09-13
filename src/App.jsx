@@ -3,7 +3,7 @@ import { supabase } from "./lib/supabaseClient.js";
 import {
   Hand, ClipboardCheck, Folder, Smile, StickyNote, Search, ClipboardList,
   SlidersHorizontal, Plus, GraduationCap, School, ChevronLeft, ChevronRight, UserPlus,
-  MoreVertical, HelpCircle, Printer, CalendarDays,
+  MoreVertical, HelpCircle, Printer, CalendarDays, Mail,
 } from "lucide-react";
 
 // ---------- Design tokens (mismos que el prototipo original) ----------
@@ -6454,6 +6454,51 @@ function PopupElegirNombre({ valorInicial = "", titulo, subtitulo, textoBoton, o
 // Popup provisorio (mientras dure la prueba con los colegas) para que
 // cualquier docente le mande a Carloncho una sugerencia o comentario
 // sobre la app, sin salir de donde está.
+// Aviso de que una institución invitó al docente a sumar una materia y
+// curso a su CISD. Aparece solo, al entrar, si hay algo pendiente de
+// aceptar — con un latido suave en el ícono para que se note sin
+// interrumpir de más.
+function ModalInvitacionInstitucional({ info, onAceptar, onAhoraNo, aceptando }) {
+  const { institucion, curso, materia } = info;
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(21,53,49,0.65)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 220, padding: 20 }}>
+      <div style={{ background: COLORS.white, borderRadius: 18, padding: 26, width: "100%", maxWidth: 380, boxShadow: "0 20px 46px rgba(0,0,0,0.35)", textAlign: "center" }}>
+        <div
+          style={{
+            width: 56, height: 56, borderRadius: "50%", background: COLORS.ochreSoft, margin: "0 auto 16px",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            animation: "invitacionLatido 2.2s ease-in-out infinite",
+          }}
+        >
+          <Mail size={26} strokeWidth={2.2} color={COLORS.ochre} />
+        </div>
+        <div style={{ fontFamily: "'Fraunces', serif", fontWeight: 700, fontSize: 19, color: COLORS.pineDark, marginBottom: 8 }}>
+          Tenés una invitación
+        </div>
+        <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14, color: COLORS.inkSoft, lineHeight: 1.5, marginBottom: 22 }}>
+          <b style={{ color: COLORS.ink }}>{institucion.nombre}</b> te invitó a sumar <b style={{ color: COLORS.ink }}>{materia.nombre_materia}</b> de <b style={{ color: COLORS.ink }}>{curso.nombre}</b> a tu CISD.
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <button
+            onClick={onAceptar}
+            disabled={aceptando}
+            style={{ padding: "13px", borderRadius: 12, border: "none", background: COLORS.pine, color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 14.5, fontWeight: 700, cursor: aceptando ? "default" : "pointer" }}
+          >
+            {aceptando ? "Sumando…" : "Aceptar y sumarlo a CISD"}
+          </button>
+          <button
+            onClick={onAhoraNo}
+            disabled={aceptando}
+            style={{ padding: "11px", borderRadius: 12, border: "none", background: "transparent", color: COLORS.inkSoft, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
+          >
+            Ahora no
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PopupSugerencia({ onEnviar, onCerrar }) {
   const [r1, setR1] = useState("");
   const [r2, setR2] = useState("");
@@ -6674,6 +6719,8 @@ function CISDNavegacion() {
   // puede quedar suelta (colegioId/cursoId null) o atada a un curso puntual.
   const [notas, setNotas] = useState([]);
   const [mostrarSugerencia, setMostrarSugerencia] = useState(false);
+  const [invitacionPendiente, setInvitacionPendiente] = useState(null);
+  const [aceptandoInvitacion, setAceptandoInvitacion] = useState(false);
   const esEscritorio = useEsEscritorio();
 
   // Habilita "Cambiar nombre" desde el menú "⋮" de cualquier pantalla.
@@ -6780,6 +6827,87 @@ function CISDNavegacion() {
     cargar();
     return () => { activo = false; };
   }, []);
+
+  // Chequea, una vez que ya cargamos los datos del docente, si hay
+  // alguna invitación institucional pendiente de aceptar (una materia
+  // que un preceptor le asignó, usando su correo). Vive en una tabla
+  // aparte, del Módulo Institucional — no toca nada de los datos
+  // propios del docente hasta que él decide aceptar.
+  useEffect(() => {
+    if (!cargado) return;
+    let activo = true;
+    async function chequearInvitacion() {
+      const { data } = await supabase.auth.getSession();
+      const sesionActual = data && data.session;
+      if (!sesionActual || !sesionActual.user || !sesionActual.user.email) return;
+      const { data: materias, error } = await supabase
+        .from("institucional_materias")
+        .select("*")
+        .eq("docente_email", sesionActual.user.email)
+        .is("aceptado_en", null);
+      if (error || !materias || materias.length === 0) return;
+      const materia = materias[0];
+      const { data: cursoInst } = await supabase.from("institucional_cursos").select("*").eq("id", materia.curso_id).single();
+      if (!cursoInst) return;
+      const { data: institucionInst } = await supabase.from("institucional_instituciones").select("*").eq("id", cursoInst.institucion_id).single();
+      if (!institucionInst) return;
+      if (activo) setInvitacionPendiente({ materia, curso: cursoInst, institucion: institucionInst });
+    }
+    chequearInvitacion();
+    return () => { activo = false; };
+  }, [cargado]);
+
+  // El docente aceptó: le armamos el colegio y el curso si todavía no
+  // los tenía (reutilizando los que ya existan, por si acepta una
+  // segunda materia de la misma institución más adelante), y le copiamos
+  // el listado de alumnos SOLO si el curso se acaba de crear — para no
+  // duplicar nombres si ya los tenía de una materia anterior.
+  async function aceptarInvitacionInstitucional() {
+    if (!invitacionPendiente) return;
+    setAceptandoInvitacion(true);
+    const { materia, curso, institucion } = invitacionPendiente;
+
+    let colId = (colegios.find((c) => c.institucionalId === institucion.id) || {}).id;
+    if (!colId) {
+      colId = nuevoId("col");
+      setColegios((prev) => [...prev, { id: colId, nombre: institucion.nombre, institucionalId: institucion.id }]);
+    }
+
+    let curId = (cursos.find((c) => c.institucionalCursoId === curso.id) || {}).id;
+    let cursoNuevo = false;
+    if (!curId) {
+      curId = nuevoId("curso");
+      cursoNuevo = true;
+      setCursos((prev) => [...prev, { id: curId, colegioId: colId, nombre: curso.nombre, materia: (materia.nombre_materia || "").trim(), institucionalCursoId: curso.id }]);
+      setCriterios((prev) => prev.map((c) => (c.porDefecto ? { ...c, activadoEnCursos: [...c.activadoEnCursos, curId] } : c)));
+    }
+
+    if (cursoNuevo) {
+      const { data: alumnosInstitucionales } = await supabase
+        .from("institucional_alumnos")
+        .select("*")
+        .eq("curso_id", curso.id)
+        .order("nombre", { ascending: true });
+      if (alumnosInstitucionales && alumnosInstitucionales.length > 0) {
+        const listaNueva = alumnosInstitucionales.map((a) => ({
+          id: nuevoId("al"), nombre: a.nombre, genero: a.genero === "m" ? "M" : "F",
+          eventos: [], notasOficiales: {}, fechaAlta: hoyISO(),
+        }));
+        setAlumnosPorCurso((prev) => ({ ...prev, [curId]: listaNueva }));
+      }
+    }
+
+    const { data } = await supabase.auth.getSession();
+    const sesionActual = data && data.session;
+    await supabase.from("institucional_materias").update({
+      aceptado_en: new Date().toISOString(),
+      docente_user_id: sesionActual ? sesionActual.user.id : null,
+    }).eq("id", materia.id);
+
+    setAceptandoInvitacion(false);
+    setInvitacionPendiente(null);
+    mostrarToast("¡Listo! Se sumó tu curso institucional.");
+  }
 
   // Agrupa los guardados: si vas cargando varias notas seguidas y rápido
   // (por ejemplo, consolidando todo un curso), no dispara un guardado
@@ -7506,6 +7634,10 @@ function CISDNavegacion() {
           100% { transform: scale(1); opacity: 0; }
         }
         .tilde-anim { display: inline-block; animation: tildePop 300ms ease forwards; }
+        @keyframes invitacionLatido {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(201,138,61,0.35); }
+          50% { box-shadow: 0 0 0 10px rgba(201,138,61,0); }
+        }
       `}</style>
 
       {esEscritorio && (
@@ -7699,6 +7831,15 @@ function CISDNavegacion() {
         <PopupSugerencia
           onEnviar={enviarSugerencia}
           onCerrar={() => setMostrarSugerencia(false)}
+        />
+      )}
+
+      {invitacionPendiente && (
+        <ModalInvitacionInstitucional
+          info={invitacionPendiente}
+          aceptando={aceptandoInvitacion}
+          onAceptar={aceptarInvitacionInstitucional}
+          onAhoraNo={() => setInvitacionPendiente(null)}
         />
       )}
 
