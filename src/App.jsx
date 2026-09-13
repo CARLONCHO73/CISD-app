@@ -6879,7 +6879,18 @@ function CISDNavegacion() {
       curId = nuevoId("curso");
       cursoNuevo = true;
       setCursos((prev) => [...prev, { id: curId, colegioId: colId, nombre: curso.nombre, materia: (materia.nombre_materia || "").trim(), institucionalCursoId: curso.id }]);
-      setCriterios((prev) => prev.map((c) => (c.porDefecto ? { ...c, activadoEnCursos: [...c.activadoEnCursos, curId] } : c)));
+      // Si el docente ya usa CISD, le sumamos automáticamente todos los
+      // criterios que ya tiene activos en CUALQUIERA de sus cursos actuales
+      // (no solo los marcados "en todos mis cursos") — así no arranca de
+      // cero, y solo tiene que sacar lo que no le sirva para este curso
+      // puntual. Si es alguien nuevo, sin cursos previos todavía, arranca
+      // con los criterios de fábrica de siempre, igual que cualquier curso
+      // nuevo en CISD.
+      setCriterios((prev) => prev.map((c) => (
+        (c.porDefecto || c.activadoEnCursos.length > 0)
+          ? { ...c, activadoEnCursos: [...c.activadoEnCursos, curId] }
+          : c
+      )));
     }
 
     if (cursoNuevo) {
