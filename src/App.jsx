@@ -4624,27 +4624,49 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
   const refDescargar = useRef(null);
 
   const columnas = resolverColumnasNotas(colegio.id, nombresColumnasPorColegio);
-  const esCursoInstitucional = !!curso.institucionalMateriaId;
+  const [materiaIdInstitucional, setMateriaIdInstitucional] = useState(curso.institucionalMateriaId || null);
+  const esCursoInstitucional = !!curso.institucionalCursoId;
+
+  // Cursos aceptados antes de este cambio no tienen guardado a qué materia
+  // institucional puntual corresponden (antes solo se guardaba el curso).
+  // Si falta, lo buscamos acá mismo por correo + curso, una sola vez.
+  useEffect(() => {
+    if (!esCursoInstitucional || materiaIdInstitucional) return;
+    let activo = true;
+    supabase.auth.getUser().then(({ data }) => {
+      const email = data && data.user && data.user.email;
+      if (!email) return;
+      supabase
+        .from("institucional_materias")
+        .select("id")
+        .eq("curso_id", curso.institucionalCursoId)
+        .eq("docente_email", email)
+        .maybeSingle()
+        .then(({ data: materia }) => { if (activo && materia) setMateriaIdInstitucional(materia.id); });
+    });
+    return () => { activo = false; };
+  }, [esCursoInstitucional, curso.institucionalCursoId, materiaIdInstitucional]);
 
   // Si el curso viene del Módulo Institucional, buscamos si ya se compartió
   // antes una planilla de esta materia, para mostrar la fecha exacta.
   useEffect(() => {
-    if (!esCursoInstitucional) return;
+    if (!materiaIdInstitucional) return;
     let activo = true;
     supabase
       .from("institucional_planillas_compartidas")
       .select("compartido_en")
-      .eq("materia_id", curso.institucionalMateriaId)
+      .eq("materia_id", materiaIdInstitucional)
       .maybeSingle()
       .then(({ data }) => { if (activo && data) setCompartidoEn(data.compartido_en); });
     return () => { activo = false; };
-  }, [esCursoInstitucional, curso.institucionalMateriaId]);
+  }, [materiaIdInstitucional]);
 
   async function compartirPlanilla() {
+    if (!materiaIdInstitucional) return;
     setCompartiendo(true);
     const html = construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto });
     const { error } = await supabase.from("institucional_planillas_compartidas").upsert(
-      { materia_id: curso.institucionalMateriaId, html, compartido_en: new Date().toISOString() },
+      { materia_id: materiaIdInstitucional, html, compartido_en: new Date().toISOString() },
       { onConflict: "materia_id" }
     );
     setCompartiendo(false);
@@ -4764,8 +4786,8 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
             {esCursoInstitucional && (
               <button
                 onClick={compartirPlanilla}
-                disabled={compartiendo}
-                style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 10, border: `1px solid rgba(255,255,255,0.35)`, background: "transparent", color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 700, cursor: compartiendo ? "default" : "pointer", opacity: compartiendo ? 0.6 : 1 }}
+                disabled={compartiendo || !materiaIdInstitucional}
+                style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 10, border: `1px solid rgba(255,255,255,0.35)`, background: "transparent", color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 700, cursor: (compartiendo || !materiaIdInstitucional) ? "default" : "pointer", opacity: (compartiendo || !materiaIdInstitucional) ? 0.6 : 1 }}
               >
                 <Share2 size={14} strokeWidth={2.4} /> {compartiendo ? "Compartiendo…" : "Compartir"}
               </button>
