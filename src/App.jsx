@@ -5092,7 +5092,7 @@ function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, nota
       const claseCuat = c.tipo === "cuat" ? " td-cuat" : "";
       if (!valor) return `<td class="celda-vacia${claseCuat}">—</td>`;
       if (esMarcaAusente(valor)) return `<td class="${claseCuat.trim()}" style="color:${COLORS.notaRoja};font-weight:700;">Aus</td>`;
-      const color = c.tipo === "nota" ? colorNota(valor, notaAprobacion) : COLORS.ink;
+      const color = valor !== "" ? colorNota(valor, notaAprobacion) : COLORS.ink;
       const negrita = c.tipo === "nota" ? 700 : 400;
       return `<td class="${claseCuat.trim()}" style="color:${color};font-weight:${negrita};">${escapeHtml(valor)}</td>`;
     }).join("");
@@ -5126,8 +5126,8 @@ function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, nota
   body { font-family: Arial, sans-serif; color: ${COLORS.ink}; margin: 0; }
   h1 { font-size: 14pt; margin: 0 0 2px 0; }
   .meta { font-size: 9pt; color: ${COLORS.inkSoft}; margin-bottom: 10px; }
-  table { border-collapse: collapse; width: 100%; }
-  th, td { border: 1px solid ${COLORS.line}; padding: 4px 3px; font-size: 8.3pt; text-align: center; }
+  table { border-collapse: collapse; width: auto; table-layout: fixed; }
+  th, td { border: 1px solid ${COLORS.line}; padding: 3px 1px; font-size: 8.3pt; text-align: center; width: 30px; }
   th { background: ${COLORS.pineDark}; color: ${COLORS.white}; font-size: 8pt; }
   .col-nombre { text-align: left; font-weight: 700; width: ${anchoNombrePx}px; }
   .col-num { color: #999; font-size: 7.5pt; width: 16px; }
