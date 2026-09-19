@@ -3,7 +3,7 @@ import { supabase } from "./lib/supabaseClient.js";
 import {
   Hand, ClipboardCheck, Folder, Smile, StickyNote, Search, ClipboardList,
   SlidersHorizontal, Plus, GraduationCap, School, ChevronLeft, ChevronRight, UserPlus,
-  MoreVertical, HelpCircle, Printer, CalendarDays, Mail,
+  MoreVertical, HelpCircle, Printer, CalendarDays, Mail, Share2,
 } from "lucide-react";
 
 // ---------- Design tokens (mismos que el prototipo original) ----------
@@ -4616,12 +4616,40 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
   const [tourActivo, setTourActivo] = useState(false); // DESACTIVADO TEMPORALMENTE (prueba diagnóstica del freeze en celular)
   const [modoEdicion, setModoEdicion] = useState(false);
   const [menuDescargaAbierto, setMenuDescargaAbierto] = useState(false);
+  const [compartidoEn, setCompartidoEn] = useState(null);
+  const [compartiendo, setCompartiendo] = useState(false);
   const refGrilla = useRef(null);
   const refNota = useRef(null);
   const refPrimeraColumna = useRef(null);
   const refDescargar = useRef(null);
 
   const columnas = resolverColumnasNotas(colegio.id, nombresColumnasPorColegio);
+  const esCursoInstitucional = !!curso.institucionalMateriaId;
+
+  // Si el curso viene del Módulo Institucional, buscamos si ya se compartió
+  // antes una planilla de esta materia, para mostrar la fecha exacta.
+  useEffect(() => {
+    if (!esCursoInstitucional) return;
+    let activo = true;
+    supabase
+      .from("institucional_planillas_compartidas")
+      .select("compartido_en")
+      .eq("materia_id", curso.institucionalMateriaId)
+      .maybeSingle()
+      .then(({ data }) => { if (activo && data) setCompartidoEn(data.compartido_en); });
+    return () => { activo = false; };
+  }, [esCursoInstitucional, curso.institucionalMateriaId]);
+
+  async function compartirPlanilla() {
+    setCompartiendo(true);
+    const html = construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto });
+    const { error } = await supabase.from("institucional_planillas_compartidas").upsert(
+      { materia_id: curso.institucionalMateriaId, html, compartido_en: new Date().toISOString() },
+      { onConflict: "materia_id" }
+    );
+    setCompartiendo(false);
+    if (!error) setCompartidoEn(new Date().toISOString());
+  }
 
   const pasos = [
     { titulo: "Planilla oficial del curso", texto: "Es la misma tabla de 7 columnas que ves en la Ficha de cada alumno, pero de todo el curso junto. Se arma sola con lo que vas cargando.", ref: refGrilla },
@@ -4656,22 +4684,33 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
           <span style={{ fontFamily: "'Fraunces', serif", fontSize: 15, fontWeight: 600, color: COLORS.white }}>Planilla de Calificaciones</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px 10px", marginTop: 10 }}>
-          <div
-            onClick={onTogglePromedioAuto}
-            style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", width: "fit-content" }}
-          >
-            <div style={{
-              width: 34, height: 19, borderRadius: 999, background: promedioAuto ? COLORS.ochre : "rgba(255,255,255,0.25)",
-              position: "relative", transition: "background 0.15s", flexShrink: 0,
-            }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
+            <div
+              onClick={onTogglePromedioAuto}
+              style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", width: "fit-content" }}
+            >
               <div style={{
-                position: "absolute", top: 2, left: promedioAuto ? 17 : 2, width: 15, height: 15, borderRadius: "50%",
-                background: COLORS.white, transition: "left 0.15s",
-              }} />
+                width: 34, height: 19, borderRadius: 999, background: promedioAuto ? COLORS.ochre : "rgba(255,255,255,0.25)",
+                position: "relative", transition: "background 0.15s", flexShrink: 0,
+              }}>
+                <div style={{
+                  position: "absolute", top: 2, left: promedioAuto ? 17 : 2, width: 15, height: 15, borderRadius: "50%",
+                  background: COLORS.white, transition: "left 0.15s",
+                }} />
+              </div>
+              <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 600, color: COLORS.white }}>
+                Cálculo de promedio
+              </span>
             </div>
-            <span style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 600, color: COLORS.white }}>
-              Cálculo de promedio
-            </span>
+            {esCursoInstitucional && (
+              <span style={{
+                fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, fontWeight: 600,
+                color: compartidoEn ? COLORS.ochre : "rgba(255,255,255,0.55)",
+                fontStyle: compartidoEn ? "normal" : "italic",
+              }}>
+                {compartidoEn ? `Planilla enviada · ${formatearFechaHoraExacta(compartidoEn)}` : "Planilla sin enviar"}
+              </span>
+            )}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             <button
@@ -4722,6 +4761,15 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
                 </>
               )}
             </div>
+            {esCursoInstitucional && (
+              <button
+                onClick={compartirPlanilla}
+                disabled={compartiendo}
+                style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 10, border: `1px solid rgba(255,255,255,0.35)`, background: "transparent", color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, fontWeight: 700, cursor: compartiendo ? "default" : "pointer", opacity: compartiendo ? 0.6 : 1 }}
+              >
+                <Share2 size={14} strokeWidth={2.4} /> {compartiendo ? "Compartiendo…" : "Compartir"}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -4870,6 +4918,17 @@ function fechaEmisionHoy() {
   const dd = String(d.getDate()).padStart(2, "0");
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   return `${dd}/${mm}/${d.getFullYear()}`;
+}
+
+// Fecha y hora exacta, para mostrar "compartido el 12/09/2026 18:41".
+function formatearFechaHoraExacta(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${dd}/${mm}/${d.getFullYear()} ${hh}:${min}`;
 }
 
 const CLAVES_NOTAS_POR_PERIODO = { "1": ["inf1c1", "inf2c1", "cuat1"], "2": ["inf1c2", "inf2c2", "cuat2"] };
@@ -6878,7 +6937,7 @@ function CISDNavegacion() {
     if (!curId) {
       curId = nuevoId("curso");
       cursoNuevo = true;
-      setCursos((prev) => [...prev, { id: curId, colegioId: colId, nombre: curso.nombre, materia: (materia.nombre_materia || "").trim(), institucionalCursoId: curso.id }]);
+      setCursos((prev) => [...prev, { id: curId, colegioId: colId, nombre: curso.nombre, materia: (materia.nombre_materia || "").trim(), institucionalCursoId: curso.id, institucionalMateriaId: materia.id }]);
       // Si el docente ya usa CISD, le sumamos automáticamente todos los
       // criterios que ya tiene activos en CUALQUIERA de sus cursos actuales
       // (no solo los marcados "en todos mis cursos") — así no arranca de
