@@ -5083,7 +5083,7 @@ function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, nota
   // Ancho de la columna "Alumno", calculado según el nombre más largo del
   // curso, para no desperdiciar ni faltar espacio.
   const nombreMasLargo = alumnos.reduce((max, a) => Math.max(max, (a.nombre || "").length), 8);
-  const anchoNombrePx = Math.max(nombreMasLargo * 5.4 + 14, 55);
+  const anchoNombrePx = Math.max(nombreMasLargo * 7 + 26, 70);
 
   const filas = alumnos.map((al, i) => {
     const { valores } = notasConPromedios(al.notasOficiales, promedioAuto);
@@ -5123,14 +5123,14 @@ function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, nota
 <style>
   @page { size: A4; margin: 10mm; }
   * { box-sizing: border-box; }
-  body { font-family: Arial, sans-serif; color: ${COLORS.ink}; margin: 0; }
-  h1 { font-size: 14pt; margin: 0 0 2px 0; }
-  .meta { font-size: 9pt; color: ${COLORS.inkSoft}; margin-bottom: 10px; }
-  table { border-collapse: collapse; width: auto; table-layout: fixed; }
-  th, td { border: 1px solid ${COLORS.line}; padding: 3px 1px; font-size: 8.3pt; text-align: center; width: 30px; }
-  th { background: ${COLORS.pineDark}; color: ${COLORS.white}; font-size: 8pt; }
-  .col-nombre { text-align: left; font-weight: 700; width: ${anchoNombrePx}px; }
-  .col-num { color: #999; font-size: 7.5pt; width: 16px; }
+  body { font-family: Arial, sans-serif; color: ${COLORS.ink}; margin: 24px auto; max-width: 900px; padding: 0 16px; }
+  h1 { font-size: 16pt; margin: 0 0 3px 0; }
+  .meta { font-size: 10pt; color: ${COLORS.inkSoft}; margin-bottom: 14px; }
+  table { border-collapse: collapse; width: auto; table-layout: fixed; margin: 0 auto; }
+  th, td { border: 1px solid ${COLORS.line}; padding: 6px 4px; font-size: 10.5pt; text-align: center; width: 38px; }
+  th { background: ${COLORS.pineDark}; color: ${COLORS.white}; font-size: 9.5pt; }
+  .col-nombre { text-align: left; font-weight: 700; width: ${anchoNombrePx}px; padding-left: 8px; }
+  .col-num { color: #999; font-size: 8.5pt; width: 20px; }
   .celda-vacia { color: #bbb; }
   .celda-raya { color: #bbb; }
   .celda-pendiente { color: #bbb; }
