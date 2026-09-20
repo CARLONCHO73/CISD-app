@@ -5129,7 +5129,7 @@ function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, nota
   h1 { font-size: 16pt; margin: 0 0 3px 0; }
   .meta { font-size: 10pt; color: ${COLORS.inkSoft}; margin-bottom: 14px; }
   table { border-collapse: collapse; width: auto; table-layout: fixed; }
-  th, td { border: 1.5px solid #A39C89; padding: 6px 4px; font-size: 10.5pt; text-align: center; width: 38px; }
+  th, td { border: 1.5px solid #000; padding: 6px 4px; font-size: 10.5pt; text-align: center; width: 38px; }
   th { background: ${COLORS.pineDark}; color: ${COLORS.white}; font-size: 9.5pt; }
   .col-nombre { text-align: left; font-weight: 700; width: ${anchoNombrePx}px; padding-left: 8px; }
   .col-num { color: #999; font-size: 8.5pt; width: 20px; }
@@ -5138,9 +5138,23 @@ function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, nota
   .celda-pendiente { color: #bbb; }
   .th-cuat { background: #234a3e; }
   .td-cuat { background: #EDEDED; }
+  .controles { position: fixed; top: 12px; right: 12px; display: flex; align-items: center; gap: 6px; background: #fff; padding: 6px 8px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.18); z-index: 10; }
+  .controles button { border: none; background: ${COLORS.pineDark}; color: ${COLORS.white}; font-size: 13px; font-weight: 700; border-radius: 6px; padding: 5px 11px; cursor: pointer; font-family: Arial, sans-serif; }
+  .controles button.imprimir { background: ${COLORS.ochre}; }
+  #zoom-porcentaje { font-size: 12px; color: ${COLORS.inkSoft}; min-width: 36px; text-align: center; font-family: Arial, sans-serif; }
+  @media print {
+    .controles { display: none !important; }
+    .hoja { zoom: 1 !important; }
+  }
 </style>
 </head>
 <body>
+<div class="controles">
+  <button class="imprimir" onclick="window.print()">🖶 Imprimir</button>
+  <button onclick="cambiarZoomPlanilla(-10)">−</button>
+  <span id="zoom-porcentaje">100%</span>
+  <button onclick="cambiarZoomPlanilla(10)">+</button>
+</div>
 <div class="hoja">
 <h1>Planilla de Calificaciones</h1>
 <div class="meta">${escapeHtml(colegio.nombre)} · ${escapeHtml(curso.nombre)}${curso.materia ? " · " + escapeHtml(curso.materia) : ""} · Emitido ${fechaEmision}</div>
@@ -5149,6 +5163,14 @@ function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, nota
 ${filas}
 </table>
 </div>
+<script>
+  var nivelZoomPlanilla = 100;
+  function cambiarZoomPlanilla(delta) {
+    nivelZoomPlanilla = Math.min(200, Math.max(50, nivelZoomPlanilla + delta));
+    document.querySelector(".hoja").style.zoom = (nivelZoomPlanilla / 100);
+    document.getElementById("zoom-porcentaje").textContent = nivelZoomPlanilla + "%";
+  }
+</script>
 </body>
 </html>`;
 }
