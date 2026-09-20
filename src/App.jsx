@@ -5129,7 +5129,7 @@ function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, nota
   h1 { font-size: 16pt; margin: 0 0 3px 0; }
   .meta { font-size: 10pt; color: ${COLORS.inkSoft}; margin-bottom: 14px; }
   table { border-collapse: collapse; width: auto; table-layout: fixed; }
-  th, td { border: 1px solid ${COLORS.line}; padding: 6px 4px; font-size: 10.5pt; text-align: center; width: 38px; }
+  th, td { border: 1.5px solid #A39C89; padding: 6px 4px; font-size: 10.5pt; text-align: center; width: 38px; }
   th { background: ${COLORS.pineDark}; color: ${COLORS.white}; font-size: 9.5pt; }
   .col-nombre { text-align: left; font-weight: 700; width: ${anchoNombrePx}px; padding-left: 8px; }
   .col-num { color: #999; font-size: 8.5pt; width: 20px; }
