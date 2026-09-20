@@ -4618,6 +4618,21 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
   const [menuDescargaAbierto, setMenuDescargaAbierto] = useState(false);
   const [compartidoEn, setCompartidoEn] = useState(null);
   const [compartiendo, setCompartiendo] = useState(false);
+  const [membrete, setMembrete] = useState(null);
+
+  // Si el colegio viene de una institución del Módulo Institucional, traemos
+  // los escudos/lema para armar el membrete arriba de la Planilla.
+  useEffect(() => {
+    if (!colegio.institucionalId) return;
+    let activo = true;
+    supabase
+      .from("institucional_instituciones")
+      .select("nombre, escudo_principal_url, escudo_secundario_url, lema")
+      .eq("id", colegio.institucionalId)
+      .maybeSingle()
+      .then(({ data }) => { if (activo && data) setMembrete(data); });
+    return () => { activo = false; };
+  }, [colegio.institucionalId]);
   const refGrilla = useRef(null);
   const refNota = useRef(null);
   const refPrimeraColumna = useRef(null);
@@ -4664,7 +4679,7 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
   async function compartirPlanilla() {
     if (!materiaIdInstitucional) return;
     setCompartiendo(true);
-    const html = construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto });
+    const html = construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto, membrete });
     const { error } = await supabase.from("institucional_planillas_compartidas").upsert(
       { materia_id: materiaIdInstitucional, html, compartido_en: new Date().toISOString() },
       { onConflict: "materia_id" }
@@ -4762,7 +4777,7 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
                     <div
                       onClick={() => {
                         setMenuDescargaAbierto(false);
-                        const html = construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto });
+                        const html = construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto, membrete });
                         generarPDFInformes(html);
                       }}
                       style={{ padding: "9px 10px", borderRadius: 8, color: COLORS.pine, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
@@ -4772,7 +4787,7 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
                     <div
                       onClick={() => {
                         setMenuDescargaAbierto(false);
-                        const html = construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto });
+                        const html = construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto, membrete });
                         generarWordInformes(html, nombreArchivoCorto("Planilla", curso.nombre));
                       }}
                       style={{ padding: "9px 10px", borderRadius: 8, color: COLORS.pine, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
@@ -5076,9 +5091,27 @@ const ABREVIATURA_COLUMNA = {
   nota: "Nota",
 };
 
-function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto }) {
+function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto, membrete }) {
   const fechaEmision = fechaEmisionHoy();
   const encabezados = columnas.map((c) => `<th class="${c.tipo === "cuat" ? "th-cuat" : ""}">${escapeHtml(ABREVIATURA_COLUMNA[c.key] || c.label)}</th>`).join("");
+
+  // Membrete institucional (escudos + nombre + lema), solo si el curso viene
+  // de una institución del Módulo Institucional que ya cargó esos datos.
+  const encabezadoHTML = membrete ? `
+<div class="membrete">
+  <div class="membrete-escudo">${membrete.escudo_principal_url ? `<img src="${membrete.escudo_principal_url}" />` : ""}</div>
+  <div class="membrete-centro">
+    <h1>${escapeHtml(membrete.nombre || colegio.nombre)}</h1>
+    ${membrete.lema ? `<div class="membrete-lema">${escapeHtml(membrete.lema)}</div>` : ""}
+  </div>
+  <div class="membrete-escudo">${membrete.escudo_secundario_url ? `<img src="${membrete.escudo_secundario_url}" />` : ""}</div>
+</div>
+<div class="meta">${escapeHtml(curso.nombre)}${curso.materia ? " · " + escapeHtml(curso.materia) : ""} · Emitido ${fechaEmision}</div>
+` : `
+<h1>Planilla de Calificaciones</h1>
+<div class="meta">${escapeHtml(colegio.nombre)} · ${escapeHtml(curso.nombre)}${curso.materia ? " · " + escapeHtml(curso.materia) : ""} · Emitido ${fechaEmision}</div>
+`;
+
 
   // Ancho de la columna "Alumno", calculado según el nombre más largo del
   // curso, para no desperdiciar ni faltar espacio.
@@ -5138,6 +5171,12 @@ function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, nota
   .celda-pendiente { color: #bbb; }
   .th-cuat { background: #234a3e; }
   .td-cuat { background: #EDEDED; }
+  .membrete { display: flex; align-items: center; gap: 14px; margin-bottom: 4px; }
+  .membrete-escudo { width: 52px; height: 52px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .membrete-escudo img { width: 100%; height: 100%; object-fit: contain; }
+  .membrete-centro { flex: 1; text-align: center; }
+  .membrete-centro h1 { font-size: 16pt; margin: 0; }
+  .membrete-lema { font-size: 9.5pt; color: ${COLORS.inkSoft}; font-style: italic; margin-top: 2px; }
   .controles { position: fixed; top: 12px; right: 12px; display: flex; align-items: center; gap: 6px; background: #fff; padding: 6px 8px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.18); z-index: 10; }
   .controles button { border: none; background: ${COLORS.pineDark}; color: ${COLORS.white}; font-size: 13px; font-weight: 700; border-radius: 6px; padding: 5px 11px; cursor: pointer; font-family: Arial, sans-serif; }
   .controles button.imprimir { background: ${COLORS.ochre}; }
@@ -5156,8 +5195,7 @@ function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, nota
   <button onclick="cambiarZoomPlanilla(10)">+</button>
 </div>
 <div class="hoja">
-<h1>Planilla de Calificaciones</h1>
-<div class="meta">${escapeHtml(colegio.nombre)} · ${escapeHtml(curso.nombre)}${curso.materia ? " · " + escapeHtml(curso.materia) : ""} · Emitido ${fechaEmision}</div>
+${encabezadoHTML}
 <table>
 <tr><th></th><th>Alumno</th>${encabezados}<th>Dic</th><th>Feb</th><th>Final</th></tr>
 ${filas}
