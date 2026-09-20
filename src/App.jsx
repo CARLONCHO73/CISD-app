@@ -5093,8 +5093,7 @@ function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, nota
       if (!valor) return `<td class="celda-vacia${claseCuat}">—</td>`;
       if (esMarcaAusente(valor)) return `<td class="${claseCuat.trim()}" style="color:${COLORS.notaRoja};font-weight:700;">Aus</td>`;
       const color = valor !== "" ? colorNota(valor, notaAprobacion) : COLORS.ink;
-      const negrita = c.tipo === "nota" ? 700 : 400;
-      return `<td class="${claseCuat.trim()}" style="color:${color};font-weight:${negrita};">${escapeHtml(valor)}</td>`;
+      return `<td class="${claseCuat.trim()}" style="color:${color};font-weight:700;">${escapeHtml(valor)}</td>`;
     }).join("");
 
     // Diciembre / Febrero / Nota Final: transcripción de lo ya cargado en
@@ -5112,7 +5111,8 @@ function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, nota
     const celdaFeb = celdaHTML(resultado.feb);
     const celdaFinal = celdaHTML(resultado.final);
 
-    return `<tr><td class="col-num">${i + 1}</td><td class="col-nombre">${escapeHtml(al.nombre)}</td>${celdas}${celdaDic}${celdaFeb}${celdaFinal}</tr>`;
+    const colorNombre = al.genero === "M" ? COLORS.nombreM : COLORS.nombreF;
+    return `<tr><td class="col-num">${i + 1}</td><td class="col-nombre" style="color:${colorNombre};">${escapeHtml(al.nombre)}</td>${celdas}${celdaDic}${celdaFeb}${celdaFinal}</tr>`;
   }).join("\n");
 
   return `<!DOCTYPE html>
@@ -5123,10 +5123,12 @@ function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, nota
 <style>
   @page { size: A4; margin: 10mm; }
   * { box-sizing: border-box; }
-  body { font-family: Arial, sans-serif; color: ${COLORS.ink}; margin: 24px auto; max-width: 900px; padding: 0 16px; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; color: ${COLORS.ink}; display: flex; justify-content: center; }
+  .hoja { padding: 24px 16px; }
   h1 { font-size: 16pt; margin: 0 0 3px 0; }
   .meta { font-size: 10pt; color: ${COLORS.inkSoft}; margin-bottom: 14px; }
-  table { border-collapse: collapse; width: auto; table-layout: fixed; margin: 0 auto; }
+  table { border-collapse: collapse; width: auto; table-layout: fixed; }
   th, td { border: 1px solid ${COLORS.line}; padding: 6px 4px; font-size: 10.5pt; text-align: center; width: 38px; }
   th { background: ${COLORS.pineDark}; color: ${COLORS.white}; font-size: 9.5pt; }
   .col-nombre { text-align: left; font-weight: 700; width: ${anchoNombrePx}px; padding-left: 8px; }
@@ -5139,12 +5141,14 @@ function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, nota
 </style>
 </head>
 <body>
+<div class="hoja">
 <h1>Planilla de Calificaciones</h1>
 <div class="meta">${escapeHtml(colegio.nombre)} · ${escapeHtml(curso.nombre)}${curso.materia ? " · " + escapeHtml(curso.materia) : ""} · Emitido ${fechaEmision}</div>
 <table>
 <tr><th></th><th>Alumno</th>${encabezados}<th>Dic</th><th>Feb</th><th>Final</th></tr>
 ${filas}
 </table>
+</div>
 </body>
 </html>`;
 }
