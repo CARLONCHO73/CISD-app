@@ -4619,6 +4619,7 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
   const [compartidoEn, setCompartidoEn] = useState(null);
   const [compartiendo, setCompartiendo] = useState(false);
   const [membrete, setMembrete] = useState(null);
+  const [profesorNombre, setProfesorNombre] = useState(null);
 
   // Si el colegio viene de una institución del Módulo Institucional, traemos
   // los escudos/lema para armar el membrete arriba de la Planilla.
@@ -4662,6 +4663,22 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
     return () => { activo = false; };
   }, [esCursoInstitucional, curso.institucionalCursoId, materiaIdInstitucional]);
 
+  // El nombre del profesor para el membrete es el mismo que cargó el
+  // preceptor en "Materias y docentes" del Módulo Institucional.
+  useEffect(() => {
+    if (!materiaIdInstitucional) return;
+    let activo = true;
+    supabase
+      .from("institucional_materias")
+      .select("docente_apellido, docente_nombre")
+      .eq("id", materiaIdInstitucional)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (activo && data && data.docente_apellido) setProfesorNombre(`${data.docente_apellido}, ${data.docente_nombre}`);
+      });
+    return () => { activo = false; };
+  }, [materiaIdInstitucional]);
+
   // Si el curso viene del Módulo Institucional, buscamos si ya se compartió
   // antes una planilla de esta materia, para mostrar la fecha exacta.
   useEffect(() => {
@@ -4679,7 +4696,7 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
   async function compartirPlanilla() {
     if (!materiaIdInstitucional) return;
     setCompartiendo(true);
-    const html = construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto, membrete });
+    const html = construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto, membrete, profesorNombre });
     const { error } = await supabase.from("institucional_planillas_compartidas").upsert(
       { materia_id: materiaIdInstitucional, html, compartido_en: new Date().toISOString() },
       { onConflict: "materia_id" }
@@ -4777,7 +4794,7 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
                     <div
                       onClick={() => {
                         setMenuDescargaAbierto(false);
-                        const html = construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto, membrete });
+                        const html = construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto, membrete, profesorNombre });
                         generarPDFInformes(html);
                       }}
                       style={{ padding: "9px 10px", borderRadius: 8, color: COLORS.pine, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
@@ -4787,7 +4804,7 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
                     <div
                       onClick={() => {
                         setMenuDescargaAbierto(false);
-                        const html = construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto, membrete });
+                        const html = construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto, membrete, profesorNombre });
                         generarWordInformes(html, nombreArchivoCorto("Planilla", curso.nombre));
                       }}
                       style={{ padding: "9px 10px", borderRadius: 8, color: COLORS.pine, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
@@ -5091,12 +5108,13 @@ const ABREVIATURA_COLUMNA = {
   nota: "Nota",
 };
 
-function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto, membrete }) {
+function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto, membrete, profesorNombre }) {
   const fechaEmision = fechaEmisionHoy();
   const encabezados = columnas.map((c) => `<th class="${c.tipo === "cuat" ? "th-cuat" : ""}">${escapeHtml(ABREVIATURA_COLUMNA[c.key] || c.label)}</th>`).join("");
 
   // Membrete institucional (escudos + nombre + lema), solo si el curso viene
   // de una institución del Módulo Institucional que ya cargó esos datos.
+  const cicloLectivo = new Date().getFullYear();
   const encabezadoHTML = membrete ? `
 <div class="membrete">
   <div class="membrete-escudo">${membrete.escudo_principal_url ? `<img src="${membrete.escudo_principal_url}" />` : ""}</div>
@@ -5106,7 +5124,16 @@ function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, nota
   </div>
   <div class="membrete-escudo">${membrete.escudo_secundario_url ? `<img src="${membrete.escudo_secundario_url}" />` : ""}</div>
 </div>
-<div class="meta">${escapeHtml(curso.nombre)}${curso.materia ? " · " + escapeHtml(curso.materia) : ""} · Emitido ${fechaEmision}</div>
+<div class="membrete-linea"></div>
+<div class="membrete-info">
+  <div class="membrete-info-izq">
+    ${curso.materia ? `<div><b>Materia:</b> ${escapeHtml(curso.materia)}</div>` : ""}
+    <div><b>Profesor/a:</b> ${profesorNombre ? escapeHtml(profesorNombre) : "_______________"}</div>
+    <div><b>Curso:</b> ${escapeHtml(curso.nombre)}</div>
+  </div>
+  <div class="membrete-ciclo">Ciclo lectivo ${cicloLectivo}</div>
+</div>
+<div class="meta">Emitido ${fechaEmision}</div>
 ` : `
 <h1>Planilla de Calificaciones</h1>
 <div class="meta">${escapeHtml(colegio.nombre)} · ${escapeHtml(curso.nombre)}${curso.materia ? " · " + escapeHtml(curso.materia) : ""} · Emitido ${fechaEmision}</div>
@@ -5177,6 +5204,10 @@ function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, nota
   .membrete-centro { flex: 1; text-align: center; }
   .membrete-centro h1 { font-size: 16pt; margin: 0; }
   .membrete-lema { font-size: 9.5pt; color: ${COLORS.inkSoft}; font-style: italic; margin-top: 2px; }
+  .membrete-linea { border-top: 2px solid ${COLORS.pineDark}; margin-top: 10px; }
+  .membrete-info { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 8px; font-size: 10pt; }
+  .membrete-info-izq { line-height: 1.6; }
+  .membrete-ciclo { font-weight: 700; color: ${COLORS.pineDark}; font-size: 11pt; }
   .controles { position: fixed; top: 12px; right: 12px; display: flex; align-items: center; gap: 6px; background: #fff; padding: 6px 8px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.18); z-index: 10; }
   .controles button { border: none; background: ${COLORS.pineDark}; color: ${COLORS.white}; font-size: 13px; font-weight: 700; border-radius: 6px; padding: 5px 11px; cursor: pointer; font-family: Arial, sans-serif; }
   .controles button.imprimir { background: ${COLORS.ochre}; }
