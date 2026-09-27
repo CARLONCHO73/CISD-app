@@ -5103,8 +5103,8 @@ function construirBloqueAlumnoHTML({ alumno, colegio, curso, cuatrimestres, crit
 // Abreviaturas cortas para que los encabezados entren bien en formato
 // vertical, sin perder claridad.
 const ABREVIATURA_COLUMNA = {
-  inf1c1: "1°i", inf2c1: "2°i", cuat1: "I",
-  inf1c2: "1°i", inf2c2: "2°i", cuat2: "II",
+  inf1c1: "1° inf", inf2c1: "2° inf", cuat1: "I",
+  inf1c2: "1° inf", inf2c2: "2° inf", cuat2: "II",
   nota: "Nota",
 };
 
@@ -5131,9 +5131,11 @@ function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, nota
     <div><b>Profesor/a:</b> ${profesorNombre ? escapeHtml(profesorNombre) : "_______________"}</div>
     <div><b>Curso:</b> ${escapeHtml(curso.nombre)}</div>
   </div>
-  <div class="membrete-ciclo">Ciclo lectivo ${cicloLectivo}</div>
+  <div class="membrete-info-der">
+    <div class="membrete-ciclo">Ciclo lectivo ${cicloLectivo}</div>
+    <div class="membrete-emitido">Emitido ${fechaEmision}</div>
+  </div>
 </div>
-<div class="meta">Emitido ${fechaEmision}</div>
 ` : `
 <h1>Planilla de Calificaciones</h1>
 <div class="meta">${escapeHtml(colegio.nombre)} · ${escapeHtml(curso.nombre)}${curso.materia ? " · " + escapeHtml(curso.materia) : ""} · Emitido ${fechaEmision}</div>
@@ -5143,7 +5145,7 @@ function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, nota
   // Ancho de la columna "Alumno", calculado según el nombre más largo del
   // curso, para no desperdiciar ni faltar espacio.
   const nombreMasLargo = alumnos.reduce((max, a) => Math.max(max, (a.nombre || "").length), 8);
-  const anchoNombrePx = Math.max(nombreMasLargo * 7 + 26, 70);
+  const anchoNombrePx = Math.max(nombreMasLargo * 7.6 + 28, 76);
 
   const filas = alumnos.map((al, i) => {
     const { valores } = notasConPromedios(al.notasOficiales, promedioAuto);
@@ -5185,29 +5187,31 @@ function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, nota
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body { font-family: Arial, sans-serif; color: ${COLORS.ink}; display: flex; justify-content: center; }
-  .hoja { padding: 24px 16px; }
+  .hoja { padding: 14px 16px; }
   h1 { font-size: 16pt; margin: 0 0 3px 0; }
   .meta { font-size: 10pt; color: ${COLORS.inkSoft}; margin-bottom: 14px; }
   table { border-collapse: collapse; width: auto; table-layout: fixed; }
-  th, td { border: 1.5px solid #000; padding: 6px 4px; font-size: 10.5pt; text-align: center; width: 38px; }
-  th { background: ${COLORS.pineDark}; color: ${COLORS.white}; font-size: 9.5pt; }
+  th, td { border: 1.3px solid #000; padding: 3px 4px; font-size: 9.5pt; text-align: center; width: 44px; }
+  th { background: ${COLORS.pineDark}; color: ${COLORS.white}; font-size: 8.8pt; }
   .col-nombre { text-align: left; font-weight: 700; width: ${anchoNombrePx}px; padding-left: 8px; }
-  .col-num { color: #999; font-size: 8.5pt; width: 20px; }
+  .col-num { color: #999; font-size: 8pt; width: 24px; }
   .celda-vacia { color: #bbb; }
   .celda-raya { color: #bbb; }
   .celda-pendiente { color: #bbb; }
   .th-cuat { background: #234a3e; }
   .td-cuat { background: #EDEDED; }
-  .membrete { display: flex; align-items: center; gap: 14px; margin-bottom: 4px; }
-  .membrete-escudo { width: 52px; height: 52px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .membrete { display: flex; align-items: center; gap: 12px; margin-bottom: 3px; }
+  .membrete-escudo { width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
   .membrete-escudo img { width: 100%; height: 100%; object-fit: contain; }
   .membrete-centro { flex: 1; text-align: center; }
-  .membrete-centro h1 { font-size: 16pt; margin: 0; }
-  .membrete-lema { font-size: 9.5pt; color: ${COLORS.inkSoft}; font-style: italic; margin-top: 2px; }
-  .membrete-linea { border-top: 2px solid ${COLORS.pineDark}; margin-top: 10px; }
-  .membrete-info { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 8px; font-size: 10pt; }
-  .membrete-info-izq { line-height: 1.6; }
-  .membrete-ciclo { font-weight: 700; color: ${COLORS.pineDark}; font-size: 11pt; }
+  .membrete-centro h1 { font-size: 14pt; margin: 0; }
+  .membrete-lema { font-size: 8.5pt; color: ${COLORS.inkSoft}; font-style: italic; margin-top: 1px; }
+  .membrete-linea { border-top: 1.5px solid ${COLORS.pineDark}; margin-top: 6px; }
+  .membrete-info { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 5px; margin-bottom: 8px; font-size: 8.8pt; }
+  .membrete-info-izq { line-height: 1.35; }
+  .membrete-info-der { text-align: right; }
+  .membrete-ciclo { font-weight: 700; color: ${COLORS.pineDark}; font-size: 9.5pt; }
+  .membrete-emitido { font-size: 8pt; color: ${COLORS.inkSoft}; margin-top: 2px; }
   .controles { position: fixed; top: 12px; right: 12px; display: flex; align-items: center; gap: 6px; background: #fff; padding: 6px 8px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.18); z-index: 10; }
   .controles button { border: none; background: ${COLORS.pineDark}; color: ${COLORS.white}; font-size: 13px; font-weight: 700; border-radius: 6px; padding: 5px 11px; cursor: pointer; font-family: Arial, sans-serif; }
   .controles button.imprimir { background: ${COLORS.ochre}; }
