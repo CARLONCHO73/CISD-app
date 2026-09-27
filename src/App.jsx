@@ -5192,7 +5192,7 @@ function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, nota
   .meta { font-size: 10pt; color: ${COLORS.inkSoft}; margin-bottom: 14px; }
   table { border-collapse: collapse; width: auto; table-layout: fixed; }
   th, td { border: 1.3px solid #000; padding: 3px 4px; font-size: 9.5pt; text-align: center; width: 44px; }
-  th { background: ${COLORS.pineDark}; color: ${COLORS.white}; font-size: 8.8pt; }
+  th { background: ${COLORS.pineDark}; color: ${COLORS.white}; font-size: 9.5pt; font-weight: 700; }
   .col-nombre { text-align: left; font-weight: 700; width: ${anchoNombrePx}px; padding-left: 8px; }
   .col-num { color: #999; font-size: 8pt; width: 24px; }
   .celda-vacia { color: #bbb; }
@@ -5201,7 +5201,7 @@ function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, nota
   .th-cuat { background: #234a3e; }
   .td-cuat { background: #EDEDED; }
   .membrete { display: flex; align-items: center; gap: 12px; margin-bottom: 3px; }
-  .membrete-escudo { width: 40px; height: 40px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .membrete-escudo { width: 58px; height: 58px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
   .membrete-escudo img { width: 100%; height: 100%; object-fit: contain; }
   .membrete-centro { flex: 1; text-align: center; }
   .membrete-centro h1 { font-size: 14pt; margin: 0; }
