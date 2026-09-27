@@ -5198,14 +5198,14 @@ function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, nota
   .celda-vacia { color: #bbb; }
   .celda-raya { color: #bbb; }
   .celda-pendiente { color: #bbb; }
-  .th-cuat { background: #234a3e; }
-  .td-cuat { background: #EDEDED; }
+  .th-cuat { background: #234a3e; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .td-cuat { background: #D9E8DE; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .membrete { display: flex; align-items: center; gap: 12px; margin-bottom: 3px; }
-  .membrete-escudo { width: 58px; height: 58px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+  .membrete-escudo { width: 100px; height: 100px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
   .membrete-escudo img { width: 100%; height: 100%; object-fit: contain; }
   .membrete-centro { flex: 1; text-align: center; }
-  .membrete-centro h1 { font-size: 14pt; margin: 0; }
-  .membrete-lema { font-size: 8.5pt; color: ${COLORS.inkSoft}; font-style: italic; margin-top: 1px; }
+  .membrete-centro h1 { font-size: 16pt; margin: 0; }
+  .membrete-lema { font-size: 9.5pt; color: ${COLORS.inkSoft}; font-style: italic; margin-top: 2px; }
   .membrete-linea { border-top: 1.5px solid ${COLORS.pineDark}; margin-top: 6px; }
   .membrete-info { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 5px; margin-bottom: 8px; font-size: 8.8pt; }
   .membrete-info-izq { line-height: 1.35; }
