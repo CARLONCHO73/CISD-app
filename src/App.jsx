@@ -1118,6 +1118,17 @@ function FilaEntidad({ Icono, titulo, subtitulo, onAbrir, onRenombrar, onElimina
     );
   }
 
+  // Con aviso: el primer toque abre el cartel con el detalle; el segundo
+  // entra al colegio y da el aviso por visto (hasta el próximo nivel).
+  function tocarBloque() {
+    if (aviso && !detalleAbierto) { setDetalleAbierto(true); return; }
+    if (aviso && detalleAbierto) {
+      setDetalleAbierto(false);
+      if (aviso.onVisto) aviso.onVisto();
+    }
+    onAbrir();
+  }
+
   const esRojo = !!aviso && (aviso.tier === "rojo" || aviso.tier === "vencido");
   const rowStyleFinal = !aviso ? rowStyle : {
     ...rowStyle,
@@ -1132,7 +1143,7 @@ function FilaEntidad({ Icono, titulo, subtitulo, onAbrir, onRenombrar, onElimina
       <style>{`@keyframes avisoLatido { 0%, 100% { box-shadow: 0 0 0 2px rgba(217,87,74,0.18); } 50% { box-shadow: 0 0 0 7px rgba(217,87,74,0.34); } }`}</style>
     )}
     <div style={rowStyleFinal}>
-      <div onClick={onAbrir} style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1, cursor: "pointer" }}>
+      <div onClick={tocarBloque} style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1, cursor: "pointer" }}>
         <div style={{ width: 32, height: 32, borderRadius: 10, background: COLORS.pine, color: COLORS.white, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <Icono size={16} strokeWidth={2.2} />
         </div>
@@ -1143,8 +1154,7 @@ function FilaEntidad({ Icono, titulo, subtitulo, onAbrir, onRenombrar, onElimina
           <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: COLORS.inkSoft }}>{subtitulo}</div>
           {aviso && (
             <div
-              onClick={(e) => { e.stopPropagation(); setDetalleAbierto((v) => !v); }}
-              style={{ marginTop: 4, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 700, color: esRojo ? "#A32D2D" : "#8A5A1E", cursor: "pointer" }}
+              style={{ marginTop: 4, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 700, color: esRojo ? "#A32D2D" : "#8A5A1E" }}
             >
               {esRojo ? "⚠" : "📅"} {aviso.etiqueta} · {fechaCortaAviso(aviso.fecha)}
             </div>
@@ -1165,7 +1175,7 @@ function FilaEntidad({ Icono, titulo, subtitulo, onAbrir, onRenombrar, onElimina
             style={{ padding: "4px 8px", fontSize: 16, color: COLORS.inkSoft, cursor: "pointer", lineHeight: 1 }}
             aria-label="Más opciones"
           >⋮</span>
-          <span onClick={onAbrir} style={{ cursor: "pointer", display: "flex" }}>
+          <span onClick={tocarBloque} style={{ cursor: "pointer", display: "flex" }}>
             <ChevronRight size={16} color={COLORS.inkSoft} strokeWidth={2.2} />
           </span>
         </div>
@@ -1180,7 +1190,7 @@ function FilaEntidad({ Icono, titulo, subtitulo, onAbrir, onRenombrar, onElimina
         <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, color: COLORS.inkSoft, marginTop: 4 }}>
           {titulo} · {aviso.etiqueta} · {fechaLargaAviso(aviso.fecha)} · {textoDiasAviso(aviso.dias)}
         </div>
-        <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, fontWeight: 700, color: COLORS.ochre, marginTop: 8 }}>Tocá para marcarlo como visto ✓</div>
+        <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, fontWeight: 700, color: COLORS.ochre, marginTop: 8 }}>Tocá el colegio para entrar, o acá para marcarlo como visto ✓</div>
       </div>
     )}
     </>
