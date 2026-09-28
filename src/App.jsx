@@ -990,9 +990,93 @@ const chipBase = {
   padding: "5px 10px", borderRadius: 999, cursor: "pointer", flexShrink: 0, whiteSpace: "nowrap",
 };
 
-function FilaEntidad({ Icono, titulo, subtitulo, onAbrir, onRenombrar, onEliminar, advertencia }) {
+// ================================================================
+// AVISO DE FECHA DE PRESENTACIÓN (solo colegios del Módulo Institucional)
+// El directivo carga hasta 6 fechas (una por período). Acá se elige la
+// más urgente que corresponda avisar: ámbar de 8 a 14 días antes, rojo con
+// latido de 7 días o menos, y "vencido" hasta 30 días después si no se
+// presentó. Lo que el docente ya vio o compartió se recuerda en este
+// dispositivo (localStorage), sin tocar los datos principales de la app.
+// ================================================================
+const CLAVES_PERIODOS_FECHA = ["inf1c1", "inf2c1", "cuat1", "inf1c2", "inf2c2", "cuat2"];
+const CLAVE_LS_AVISOS = "cisd_avisos_presentacion_v1";
+const DIAS_AVISO_AMBAR = 14;
+const DIAS_AVISO_ROJO = 7;
+const DIAS_VENCIDO_MAX = 30;
+
+function leerAvisosLS() {
+  try {
+    const o = JSON.parse(localStorage.getItem(CLAVE_LS_AVISOS));
+    return { vistos: (o && o.vistos) || {}, compartido: (o && o.compartido) || {} };
+  } catch (e) {
+    return { vistos: {}, compartido: {} };
+  }
+}
+function guardarAvisosLS(o) {
+  try { localStorage.setItem(CLAVE_LS_AVISOS, JSON.stringify(o)); } catch (e) { /* sin almacenamiento: no pasa nada */ }
+}
+function fechaISOLocal(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function parseFechaISO(iso) {
+  const [y, m, d] = String(iso).split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+function marcarAvisoVisto(llave) {
+  const ls = leerAvisosLS();
+  ls.vistos[llave] = true;
+  guardarAvisosLS(ls);
+}
+// Se llama cuando el docente toca "Compartir": da por presentada la planilla
+// del período que esté vigente, hasta la próxima fecha que cargue el directivo.
+function marcarPlanillaCompartida(institucionId) {
+  const ls = leerAvisosLS();
+  ls.compartido[institucionId] = fechaISOLocal(new Date());
+  guardarAvisosLS(ls);
+}
+function textoDiasAviso(dias) {
+  if (dias < 0) return `venció hace ${-dias} día${-dias === 1 ? "" : "s"}`;
+  if (dias === 0) return "vence hoy";
+  if (dias === 1) return "vence mañana";
+  return `vence en ${dias} días`;
+}
+function fechaCortaAviso(iso) {
+  const [, m, d] = String(iso).split("-");
+  return `${d}/${m}`;
+}
+function fechaLargaAviso(iso) {
+  const [y, m, d] = String(iso).split("-");
+  return `${d}/${m}/${y}`;
+}
+// Devuelve el aviso vigente del colegio (o null si no hay que avisar nada).
+function calcularAvisoColegio(institucionId, periodos) {
+  if (!periodos) return null;
+  const ls = leerAvisosLS();
+  const hoy = parseFechaISO(fechaISOLocal(new Date()));
+  const compartido = ls.compartido[institucionId] ? parseFechaISO(ls.compartido[institucionId]) : null;
+  const candidatos = [];
+  CLAVES_PERIODOS_FECHA.forEach((clave) => {
+    const p = periodos[clave];
+    if (!p || !p.fecha) return;
+    const f = parseFechaISO(p.fecha);
+    const dias = Math.round((f - hoy) / 86400000);
+    if (dias > DIAS_AVISO_AMBAR || dias < -DIAS_VENCIDO_MAX) return;
+    const inicioVentana = new Date(f);
+    inicioVentana.setDate(inicioVentana.getDate() - DIAS_AVISO_AMBAR);
+    if (compartido && compartido >= inicioVentana) return;
+    const tier = dias < 0 ? "vencido" : (dias <= DIAS_AVISO_ROJO ? "rojo" : "ambar");
+    const llave = `${institucionId}:${clave}:${p.fecha}:${tier}`;
+    if (ls.vistos[llave]) return;
+    candidatos.push({ clave, etiqueta: p.etiqueta, fecha: p.fecha, dias, tier, llave });
+  });
+  candidatos.sort((a, b) => a.dias - b.dias);
+  return candidatos[0] || null;
+}
+
+function FilaEntidad({ Icono, titulo, subtitulo, onAbrir, onRenombrar, onEliminar, advertencia, aviso }) {
   const [modo, setModo] = useState("normal");
   const [valor, setValor] = useState(titulo);
+  const [detalleAbierto, setDetalleAbierto] = useState(false);
 
   useEffect(() => { setValor(titulo); }, [titulo]);
 
@@ -1034,8 +1118,20 @@ function FilaEntidad({ Icono, titulo, subtitulo, onAbrir, onRenombrar, onElimina
     );
   }
 
+  const esRojo = !!aviso && (aviso.tier === "rojo" || aviso.tier === "vencido");
+  const rowStyleFinal = !aviso ? rowStyle : {
+    ...rowStyle,
+    background: esRojo ? "#FBE4E0" : "#FBF0DC",
+    border: esRojo ? "2px solid #D9574A" : `1.5px solid ${COLORS.ochre}`,
+    ...(esRojo ? { animation: "avisoLatido 1.6s ease-in-out infinite" } : {}),
+  };
+
   return (
-    <div style={rowStyle}>
+    <>
+    {aviso && (
+      <style>{`@keyframes avisoLatido { 0%, 100% { box-shadow: 0 0 0 2px rgba(217,87,74,0.18); } 50% { box-shadow: 0 0 0 7px rgba(217,87,74,0.34); } }`}</style>
+    )}
+    <div style={rowStyleFinal}>
       <div onClick={onAbrir} style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1, cursor: "pointer" }}>
         <div style={{ width: 32, height: 32, borderRadius: 10, background: COLORS.pine, color: COLORS.white, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <Icono size={16} strokeWidth={2.2} />
@@ -1045,6 +1141,14 @@ function FilaEntidad({ Icono, titulo, subtitulo, onAbrir, onRenombrar, onElimina
             {titulo}
           </div>
           <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12, color: COLORS.inkSoft }}>{subtitulo}</div>
+          {aviso && (
+            <div
+              onClick={(e) => { e.stopPropagation(); setDetalleAbierto((v) => !v); }}
+              style={{ marginTop: 4, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, fontWeight: 700, color: esRojo ? "#A32D2D" : "#8A5A1E", cursor: "pointer" }}
+            >
+              {esRojo ? "⚠" : "📅"} {aviso.etiqueta} · {fechaCortaAviso(aviso.fecha)}
+            </div>
+          )}
         </div>
       </div>
 
@@ -1067,6 +1171,19 @@ function FilaEntidad({ Icono, titulo, subtitulo, onAbrir, onRenombrar, onElimina
         </div>
       )}
     </div>
+    {aviso && detalleAbierto && (
+      <div
+        onClick={() => { setDetalleAbierto(false); if (aviso.onVisto) aviso.onVisto(); }}
+        style={{ background: COLORS.white, border: `1px solid ${COLORS.line}`, borderRadius: 12, padding: "12px 14px", margin: "-2px 0 10px", cursor: "pointer", boxShadow: "0 1px 3px rgba(21,53,49,0.06)" }}
+      >
+        <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 700, color: COLORS.pineDark }}>📅 Presentación de planilla</div>
+        <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 12.5, color: COLORS.inkSoft, marginTop: 4 }}>
+          {titulo} · {aviso.etiqueta} · {fechaLargaAviso(aviso.fecha)} · {textoDiasAviso(aviso.dias)}
+        </div>
+        <div style={{ fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11.5, fontWeight: 700, color: COLORS.ochre, marginTop: 8 }}>Tocá para marcarlo como visto ✓</div>
+      </div>
+    )}
+    </>
   );
 }
 
@@ -1194,8 +1311,9 @@ function FilaCurso({ Icono, titulo, materia, subtitulo, onAbrir, onRenombrar, on
 }
 
 
-function PantallaColegios({ colegios, cursosPorColegio, onAbrir, onAgregar, onRenombrar, onEliminar, tourVisto, onMarcarTourVisto, onAyudaRef, onAbrirSugerencia }) {
+function PantallaColegios({ colegios, cursosPorColegio, periodosPorInstitucion, onAbrir, onAgregar, onRenombrar, onEliminar, tourVisto, onMarcarTourVisto, onAyudaRef, onAbrirSugerencia }) {
   const [agregando, setAgregando] = useState(colegios.length === 0);
+  const [, setVersionAvisos] = useState(0);
   const [tourActivo, setTourActivo] = useState(!tourVisto);
   const refAgregar = useRef(null);
 
@@ -1216,12 +1334,15 @@ function PantallaColegios({ colegios, cursosPorColegio, onAbrir, onAgregar, onRe
 
       {colegios.map((col) => {
         const cantidad = (cursosPorColegio[col.id] || []).length;
+        const avisoBase = col.institucionalId ? calcularAvisoColegio(col.institucionalId, (periodosPorInstitucion || {})[col.institucionalId]) : null;
+        const aviso = avisoBase ? { ...avisoBase, onVisto: () => { marcarAvisoVisto(avisoBase.llave); setVersionAvisos((v) => v + 1); } } : null;
         return (
           <FilaEntidad
             key={col.id}
             Icono={School}
             titulo={col.nombre}
             subtitulo={cantidad === 0 ? "Sin cursos todavía" : `${cantidad} curso${cantidad === 1 ? "" : "s"}`}
+            aviso={aviso}
             onAbrir={() => onAbrir(col)}
             onRenombrar={(nombre) => onRenombrar(col.id, nombre)}
             onEliminar={() => onEliminar(col.id)}
@@ -1659,9 +1780,9 @@ function ModalRenombrarColumna({ etiquetaActual, onGuardar, onCancelar }) {
 
 // Encabezado de columna de la planilla oficial: mantener presionado un
 // instante abre el modal para renombrarlo.
-function EncabezadoColumnaEditable({ columna, refAdicional, onAbrirRenombrar }) {
+function EncabezadoColumnaEditable({ columna, refAdicional, onAbrirRenombrar, bloqueado }) {
   const timerRef = useRef(null);
-  function empezar() { timerRef.current = setTimeout(() => onAbrirRenombrar(columna), 480); }
+  function empezar() { if (!bloqueado) timerRef.current = setTimeout(() => onAbrirRenombrar(columna), 480); }
   function cancelar() { clearTimeout(timerRef.current); }
   return (
     <div
@@ -1670,7 +1791,7 @@ function EncabezadoColumnaEditable({ columna, refAdicional, onAbrirRenombrar }) 
       style={{
         background: ESTILO_TIPO_NOTA[columna.tipo].header, color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif",
         fontSize: 9.5, fontWeight: 600, textAlign: "center", padding: "6px 1px", lineHeight: 1.15, height: 29, boxSizing: "border-box",
-        display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", userSelect: "none",
+        display: "flex", alignItems: "center", justifyContent: "center", cursor: bloqueado ? "default" : "pointer", userSelect: "none",
       }}
     >
       {columna.label}
@@ -4640,6 +4761,7 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
   const refDescargar = useRef(null);
 
   const columnas = resolverColumnasNotas(colegio.id, nombresColumnasPorColegio);
+  const etiquetasExtra = (nombresColumnasPorColegio && nombresColumnasPorColegio[colegio.id]) || {};
   const [materiaIdInstitucional, setMateriaIdInstitucional] = useState(curso.institucionalMateriaId || null);
   const esCursoInstitucional = !!curso.institucionalCursoId;
 
@@ -4696,13 +4818,16 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
   async function compartirPlanilla() {
     if (!materiaIdInstitucional) return;
     setCompartiendo(true);
-    const html = construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto, membrete, profesorNombre });
+    const html = construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto, membrete, profesorNombre, etiquetasExtra });
     const { error } = await supabase.from("institucional_planillas_compartidas").upsert(
       { materia_id: materiaIdInstitucional, html, compartido_en: new Date().toISOString() },
       { onConflict: "materia_id" }
     );
     setCompartiendo(false);
-    if (!error) setCompartidoEn(new Date().toISOString());
+    if (!error) {
+      setCompartidoEn(new Date().toISOString());
+      if (colegio.institucionalId) marcarPlanillaCompartida(colegio.institucionalId);
+    }
   }
 
   const pasos = [
@@ -4794,7 +4919,7 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
                     <div
                       onClick={() => {
                         setMenuDescargaAbierto(false);
-                        const html = construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto, membrete, profesorNombre });
+                        const html = construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto, membrete, profesorNombre, etiquetasExtra });
                         generarPDFInformes(html);
                       }}
                       style={{ padding: "9px 10px", borderRadius: 8, color: COLORS.pine, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
@@ -4804,7 +4929,7 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
                     <div
                       onClick={() => {
                         setMenuDescargaAbierto(false);
-                        const html = construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto, membrete, profesorNombre });
+                        const html = construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto, membrete, profesorNombre, etiquetasExtra });
                         generarWordInformes(html, nombreArchivoCorto("Planilla", curso.nombre));
                       }}
                       style={{ padding: "9px 10px", borderRadius: 8, color: COLORS.pine, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 13, fontWeight: 600, cursor: "pointer" }}
@@ -4865,17 +4990,18 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
                 <EncabezadoColumnaEditable
                   key={c.key + "-h"}
                   columna={c}
+                  bloqueado={!!colegio.institucionalId}
                   refAdicional={c.tipo === "nota" ? refNota : (idx === 0 ? refPrimeraColumna : null)}
                   onAbrirRenombrar={(col) => setRenombrando({ key: col.key, label: col.label })}
                 />
               ))}
-              {["Dic", "Feb", "Final"].map((etiqueta) => (
-                <div key={"h-" + etiqueta} style={{
+              {[["dic", "Dic"], ["feb", "Feb"], ["final", "Final"]].map(([clave, porDefecto]) => (
+                <div key={"h-" + clave} style={{
                   background: COLORS.ochre, color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif",
                   fontSize: 9.5, fontWeight: 600, textAlign: "center", padding: "6px 1px", lineHeight: 1.15, height: 29, boxSizing: "border-box",
                   display: "flex", alignItems: "center", justifyContent: "center",
                 }}>
-                  {etiqueta}
+                  {etiquetasExtra[clave] || porDefecto}
                 </div>
               ))}
 
@@ -5108,9 +5234,18 @@ const ABREVIATURA_COLUMNA = {
   nota: "Nota",
 };
 
-function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto, membrete, profesorNombre }) {
+function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, notaAprobacion, promedioAuto, membrete, profesorNombre, etiquetasExtra }) {
   const fechaEmision = fechaEmisionHoy();
-  const encabezados = columnas.map((c) => `<th class="${c.tipo === "cuat" ? "th-cuat" : ""}">${escapeHtml(ABREVIATURA_COLUMNA[c.key] || c.label)}</th>`).join("");
+  const extras = etiquetasExtra || {};
+  // Si el nombre de la columna fue personalizado (por el directivo o por el
+  // docente), se respeta tal cual; si no, se usa la abreviatura compacta.
+  const encabezados = columnas.map((c) => {
+    const base = COLUMNAS_NOTAS.find((x) => x.key === c.key);
+    const personalizado = !!colegio.institucionalId || (base && base.label !== c.label);
+    const texto = personalizado ? c.label : (ABREVIATURA_COLUMNA[c.key] || c.label);
+    return `<th class="${c.tipo === "cuat" ? "th-cuat" : ""}">${escapeHtml(texto)}</th>`;
+  }).join("");
+  const encabezadosExtra = `<th>${escapeHtml(extras.dic || "Dic")}</th><th>${escapeHtml(extras.feb || "Feb")}</th><th>${escapeHtml(extras.final || "Final")}</th>`;
 
   // Membrete institucional (escudos + nombre + lema), solo si el curso viene
   // de una institución del Módulo Institucional que ya cargó esos datos.
@@ -5232,7 +5367,7 @@ function construirHTMLPlanillaCompleta({ colegio, curso, alumnos, columnas, nota
 <div class="hoja">
 ${encabezadoHTML}
 <table>
-<tr><th></th><th>Alumno</th>${encabezados}<th>Dic</th><th>Feb</th><th>Final</th></tr>
+<tr><th></th><th>Alumno</th>${encabezados}${encabezadosExtra}</tr>
 ${filas}
 </table>
 </div>
@@ -6836,6 +6971,42 @@ function CISDNavegacion() {
   // Nombres personalizados de las columnas de la planilla oficial (1° inf,
   // 2° inf, 1° Cuat, etc.), por colegio. { [colegioId]: { [columnKey]: label } }
   const [nombresColumnasPorColegio, setNombresColumnasPorColegio] = useState({});
+
+  // Períodos (nombres de columnas + fechas de presentación) que definió el
+  // directivo de cada institución: { [institucionId]: { [clave]: { etiqueta, fecha } } }.
+  // Solo se piden para los colegios que vienen del Módulo Institucional.
+  const [periodosPorInstitucion, setPeriodosPorInstitucion] = useState({});
+  const idsInstitucionales = [...new Set(colegios.filter((c) => c.institucionalId).map((c) => c.institucionalId))].sort().join(",");
+  useEffect(() => {
+    if (!idsInstitucionales) return;
+    let activo = true;
+    supabase
+      .from("institucional_periodos")
+      .select("*")
+      .in("institucion_id", idsInstitucionales.split(","))
+      .then(({ data }) => {
+        if (!activo || !data) return;
+        const mapa = {};
+        data.forEach((p) => {
+          if (!mapa[p.institucion_id]) mapa[p.institucion_id] = {};
+          mapa[p.institucion_id][p.clave] = { etiqueta: p.etiqueta, fecha: p.fecha };
+        });
+        setPeriodosPorInstitucion(mapa);
+      });
+    return () => { activo = false; };
+  }, [idsInstitucionales]);
+
+  // Nombres de columnas que efectivamente se muestran: en los colegios
+  // institucionales mandan siempre los del directivo (ignora lo que el
+  // docente haya renombrado a mano); en los personales, todo igual que antes.
+  const nombresColumnasEfectivos = { ...nombresColumnasPorColegio };
+  colegios.forEach((col) => {
+    if (!col.institucionalId) return;
+    const periodos = periodosPorInstitucion[col.institucionalId] || {};
+    const mapa = {};
+    Object.keys(periodos).forEach((clave) => { if (periodos[clave].etiqueta) mapa[clave] = periodos[clave].etiqueta; });
+    nombresColumnasEfectivos[col.id] = mapa;
+  });
   // Recorrido guiado: qué pantallas ya vio el docente al menos una vez,
   // para que el recorrido automático no se repita solo. Se puede volver
   // a ver siempre desde el menú "⋮ → Ayuda de esta pantalla".
@@ -7876,6 +8047,7 @@ function CISDNavegacion() {
             <PantallaColegios
               colegios={colegios}
               cursosPorColegio={cursosPorColegio}
+              periodosPorInstitucion={periodosPorInstitucion}
               onAbrir={(col) => setColegioId(col.id)}
               onAgregar={agregarColegio}
               onRenombrar={renombrarColegio}
@@ -7935,7 +8107,7 @@ function CISDNavegacion() {
             onCambiarNotaAprobacion={setNotaAprobacion}
             onCambiarNotaOficial={(alumnoId, campo, valor) => actualizarNotaOficial(cursoActual.id, alumnoId, campo, valor)}
             onCambiarNotaRecuperatorio={(alumnoId, instancia, valor) => actualizarNotaRecuperatorio(cursoActual.id, alumnoId, instancia, valor)}
-            nombresColumnasPorColegio={nombresColumnasPorColegio}
+            nombresColumnasPorColegio={nombresColumnasEfectivos}
             onRenombrarColumnaNota={renombrarColumnaNota}
             diasCurso={asistenciaPorCurso[cursoActual.id] || {}}
             diasClaseConfig={diasClasePorCurso[cursoActual.id] || []}
@@ -7976,7 +8148,7 @@ function CISDNavegacion() {
             onEditarEvento={(alumnoId, eventoId, nuevoValor) => editarEvento(cursoActual.id, alumnoId, eventoId, nuevoValor)}
             onSetRecuperatorio={(alumnoId, eventoId, valor) => setRecuperatorio(cursoActual.id, alumnoId, eventoId, valor)}
             onCambiarNotaOficial={(alumnoId, campo, valor) => actualizarNotaOficial(cursoActual.id, alumnoId, campo, valor)}
-            nombresColumnasPorColegio={nombresColumnasPorColegio}
+            nombresColumnasPorColegio={nombresColumnasEfectivos}
             onVolver={() => setFichaAlumnoId(null)}
             tourVisto={!!tourVistoPorPantalla.ficha}
             onMarcarTourVisto={() => marcarTourVisto("ficha")}
