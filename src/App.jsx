@@ -3849,7 +3849,8 @@ function CeldaResultadoOficial({ resultado, notaAprobacion }) {
     <div style={{
       width: "100%", boxSizing: "border-box", textAlign: "center", borderTop: `1px solid ${COLORS.line}`, background: bg,
       fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, fontWeight: 700, color,
-      padding: "7px 2px", minWidth: 0, contentVisibility: "auto", containIntrinsicSize: "auto 31px",
+      height: 31, display: "flex", alignItems: "center", justifyContent: "center",
+      padding: "0 2px", minWidth: 0, contentVisibility: "auto", containIntrinsicSize: "auto 31px",
     }}>
       {tipo === "vacio" ? "" : valor}
     </div>
@@ -3884,7 +3885,7 @@ function CeldaNotaOficial({ valor, tipo, notaAprobacion, onIntentarCambiar, calc
         fontFamily: "'IBM Plex Mono', monospace", fontSize: 13,
         fontWeight: calculado && !editando ? 500 : 700, fontStyle: calculado && !editando ? "italic" : "normal",
         color: calculado && !editando ? COLORS.inkSoft : color,
-        padding: "7px 2px", minWidth: 0, cursor: soloLectura ? "default" : "text",
+        height: 31, padding: "0 2px", minWidth: 0, cursor: soloLectura ? "default" : "text",
         contentVisibility: "auto", containIntrinsicSize: "auto 31px",
       }}
     />
