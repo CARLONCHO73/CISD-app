@@ -1802,6 +1802,7 @@ function EncabezadoColumnaEditable({ columna, refAdicional, onAbrirRenombrar, bl
         background: ESTILO_TIPO_NOTA[columna.tipo].header, color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif",
         fontSize: 9.5, fontWeight: 600, textAlign: "center", padding: "6px 1px", lineHeight: 1.15, height: 29, boxSizing: "border-box",
         display: "flex", alignItems: "center", justifyContent: "center", cursor: bloqueado ? "default" : "pointer", userSelect: "none",
+        borderLeft: `1px solid ${LINEA_ENCABEZADO}`,
       }}
     >
       {columna.label}
@@ -3017,6 +3018,10 @@ const COLUMNAS_NOTAS = [
   { key: "nota", label: "Nota", tipo: "nota" },
 ];
 
+// Líneas de la grilla de la Planilla (gris oscuro, para que se vea bien con poca visión).
+const LINEA_PLANILLA = "#6B675C";
+const LINEA_ENCABEZADO = "rgba(255,255,255,0.4)";
+
 const ESTILO_TIPO_NOTA = {
   inf: { header: COLORS.pineDark, celda: COLORS.white, texto: COLORS.pineDark },
   cuat: { header: "#2C6358", celda: "#E3EFEC", texto: COLORS.pineDark },
@@ -3847,7 +3852,7 @@ function CeldaResultadoOficial({ resultado, notaAprobacion }) {
   }
   return (
     <div style={{
-      width: "100%", boxSizing: "border-box", textAlign: "center", borderTop: `1px solid ${COLORS.line}`, background: bg,
+      width: "100%", boxSizing: "border-box", textAlign: "center", borderTop: `1px solid ${LINEA_PLANILLA}`, borderLeft: `1px solid ${LINEA_PLANILLA}`, background: bg,
       fontFamily: "'IBM Plex Mono', monospace", fontSize: 13, fontWeight: 700, color,
       height: 31, display: "flex", alignItems: "center", justifyContent: "center",
       padding: "0 2px", minWidth: 0, contentVisibility: "auto", containIntrinsicSize: "auto 31px",
@@ -3881,7 +3886,7 @@ function CeldaNotaOficial({ valor, tipo, notaAprobacion, onIntentarCambiar, calc
       onKeyDown={(e) => { if (e.key === "Enter") e.target.blur(); }}
       style={{
         width: "100%", boxSizing: "border-box", textAlign: "center", border: "none",
-        borderTop: `1px solid ${COLORS.line}`, background,
+        borderTop: `1px solid ${LINEA_PLANILLA}`, borderLeft: `1px solid ${LINEA_PLANILLA}`, background,
         fontFamily: "'IBM Plex Mono', monospace", fontSize: 13,
         fontWeight: calculado && !editando ? 500 : 700, fontStyle: calculado && !editando ? "italic" : "normal",
         color: calculado && !editando ? COLORS.inkSoft : color,
@@ -4971,7 +4976,7 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
               columna simplemente no tiene scroll horizontal propio, y
               se desplaza verticalmente junto con el resto porque el
               scroll vertical lo maneja el contenedor de más arriba. */}
-          <div style={{ width: anchoNombre, flexShrink: 0 }}>
+          <div style={{ width: anchoNombre, flexShrink: 0, borderBottom: `1px solid ${LINEA_PLANILLA}` }}>
             <div style={{ background: COLORS.pineDark, color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif", fontSize: 11, fontWeight: 700, padding: "6px 8px", display: "flex", alignItems: "center", height: 29, boxSizing: "border-box" }}>
               Alumno
             </div>
@@ -4980,7 +4985,7 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
                 key={al.id}
                 onClick={() => { onCerrar(); onAbrirFicha(al); }}
                 style={{
-                  background: COLORS.white, borderTop: `1px solid ${COLORS.line}`, borderRight: `1px solid ${COLORS.line}`,
+                  background: COLORS.white, borderTop: `1px solid ${LINEA_PLANILLA}`, borderRight: `1px solid ${LINEA_PLANILLA}`,
                   padding: "7px 8px", display: "flex", alignItems: "center", gap: 4, minWidth: 0, height: 31, boxSizing: "border-box",
                   contentVisibility: "auto", containIntrinsicSize: "auto 31px", cursor: "pointer",
                 }}
@@ -4996,7 +5001,7 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
           {/* Panel de notas: acá sí hay scroll horizontal, para deslizar
               entre las 7 columnas sin mover la columna de nombres. */}
           <div style={{ overflowX: "auto", flex: 1 }}>
-            <div style={{ display: "grid", gridTemplateColumns: `repeat(10, ${anchoColumna}px)`, width: "fit-content" }}>
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(10, ${anchoColumna}px)`, width: "fit-content", borderRight: `1px solid ${LINEA_PLANILLA}`, borderBottom: `1px solid ${LINEA_PLANILLA}` }}>
               {columnas.map((c, idx) => (
                 <EncabezadoColumnaEditable
                   key={c.key + "-h"}
@@ -5011,6 +5016,7 @@ function PantallaPlanillaNotas({ colegio, curso, alumnos, notaAprobacion, onCamb
                   background: COLORS.ochre, color: COLORS.white, fontFamily: "'IBM Plex Sans', sans-serif",
                   fontSize: 9.5, fontWeight: 600, textAlign: "center", padding: "6px 1px", lineHeight: 1.15, height: 29, boxSizing: "border-box",
                   display: "flex", alignItems: "center", justifyContent: "center",
+                  borderLeft: `1px solid ${LINEA_ENCABEZADO}`,
                 }}>
                   {etiquetasExtra[clave] || porDefecto}
                 </div>
